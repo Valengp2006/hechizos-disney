@@ -35,15 +35,17 @@ panel.style.cssText =
   'color:#b9aaff;background:rgba(4,3,10,.6);border:1px solid #3a2f66;pointer-events:none;display:none';
 document.body.appendChild(panel);
 
-let frames = 0, last = performance.now(), fps = 0;
-export function tickPanel() {
+let frames = 0, last = performance.now(), fps = 0, jsMs = 0;
+// jsMs: tiempo (ms) que tardó en ejecutarse la lógica del frame; no depende de la tasa de pantalla.
+export function tickPanel(frameJsMs = 0) {
+  jsMs += (frameJsMs - jsMs) * 0.1;
   frames++;
   const now = performance.now();
   if (now - last >= 500) {
     fps = Math.round((frames * 1000) / (now - last));
     frames = 0; last = now;
   }
-  if (dev) panel.textContent = `DEV · ${fps} fps · D debug · Tab modo · F pantalla completa`;
+  if (dev) panel.textContent = `DEV · ${fps} fps · JS ${jsMs.toFixed(1)} ms · D debug · Tab modo · F pantalla completa`;
 }
 onModeChange((d) => { panel.style.display = d ? 'block' : 'none'; });
 

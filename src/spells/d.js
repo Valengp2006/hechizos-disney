@@ -146,5 +146,11 @@ export function createBell(letter) {
     updateFlies(1, ms / 1000 + durSec);
   }
 
-  return { conjured, awake, reset, anchor: { x: cx, y: cy } };
+  // Alcance (px de pantalla) del frente de la onda: lo usan los encadenamientos.
+  function reach() {
+    const e = 1 - (1 - clamp01(letter.progress / 0.7)) ** 2;
+    return (1 + (cfg.bellMaxScale - 1) * e) * 0.5 * Math.hypot(w, h) * letter.scale;
+  }
+
+  return { conjured, awake, reset, reach, anchor: { x: cx, y: cy } };
 }

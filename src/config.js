@@ -210,5 +210,18 @@ export const CONFIG = {
     silenceMs: 2000,          // quietud: la palabra se lee entera
     revealMs: 5000,           // astas crecen y aparece el castillo
     idleResetMs: 30000,       // sin interacción -> todo vuelve a la oscuridad
+    closingMs: 2500,          // cuánto tarda el castillo en apagarse al reiniciar
+    wordWidthRatio: 0.72,     // ancho de la palabra DISNEY respecto al ancho de pantalla
+    wordBaseline: 0.78,       // altura (fracción del alto) donde se apoyan las letras de la palabra
+    wordGap: 0.08,            // separación entre letras de la palabra (fracción de su tamaño)
+    // Castillo genérico: una torre por letra, de alturas y anchos distintos (asimétrico).
+    // Altura de cada torre sobre su letra (fracción del alto de la letra) y ancho (de la letra).
+    towerHeights: { D: 0.55, I: 1.5, S: 0.8, N: 1.9, E: 1.1, Y: 0.7 },
+    towerWidths:  { D: 0.50, I: 0.45, S: 0.55, N: 0.40, E: 0.50, Y: 0.40 },
+    // Torres con almenas (merlones) o con mástil y banderín; nunca techo cónico.
+    towerCrown: { D: 'crenels', I: 'mast', S: 'crenels', N: 'mast', E: 'crenels', Y: 'mast' },
+    wallHeight: 0.30,         // altura del muro que une las torres (fracción del alto de letra)
+    castleLift: 0.6,          // ascenso suave del polvo de la pantalla durante el reposo (0..1)
+    castleWarmth: 0.5,        // cuánto se dora ese polvo (0..1)
   },
 };

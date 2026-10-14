@@ -12,6 +12,7 @@ import { createDust } from './dust.js';
 import { createLightPoint } from './render.js';
 import { createRecognizer } from './gestures.js';
 import { createGestureDebug } from './debug.js';
+import { createFinale } from './finale.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -26,7 +27,8 @@ const camera = new THREE.OrthographicCamera(0, 1, 0, 1, -1000, 1000);
 
 // El debug solo existe en modo dev; D lo muestra u oculta dentro de dev.
 let dev = false;
-let letters = null; // se crea al cargar la fuente; declarado antes de onModeChange, que llama a syncDebug al registrarse
+let letters = null;
+let finale = null; // se crea al cargar la fuente; declarado antes de onModeChange, que llama a syncDebug al registrarse
 let debugOn = true;
 const gestureDebug = createGestureDebug();
 scene.add(gestureDebug.object);
@@ -39,6 +41,7 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (k === 'd') { debugOn = !debugOn; syncDebug(); }
   if (k === 'r' && dev) letters?.reset(); // dev: apaga todas las letras para volver a probar
+  if (k === 'w' && dev) finale?.forceAwakenAll(); // dev: despierta las seis y dispara el final
 });
 
 initAudio();
@@ -71,17 +74,19 @@ window.addEventListener('resize', resize);
 loadFont().then((font) => {
   letters = createLetters(font);
   scene.add(letters.object);
+  finale = createFinale({ scene, letters });
   resize();
   syncDebug();
 }).catch(console.error);
 resize();
 
 renderer.setAnimationLoop(() => {
-  tickPanel();
+  const frameStart = performance.now();
   const dt = Math.min(clock.getDelta(), 0.1); // tope: una pestaña dormida no hace saltar nada
   updateInput(dt);
-  dust.setLift(letters?.lift() ?? 0);
-  dust.setWarmth(letters?.warmth() ?? 0);
+  finale?.update(dt * 1000, performance.now(), input);
+  dust.setLift(Math.max(letters?.lift() ?? 0, finale?.lift() ?? 0));
+  dust.setWarmth(Math.max(letters?.warmth() ?? 0, finale?.warmth() ?? 0));
   dust.update(dt, clock.elapsedTime, input);
   light.update(input);
   const now = performance.now();
@@ -90,4 +95,5 @@ renderer.setAnimationLoop(() => {
   letters?.update(dt * 1000, clock.elapsedTime, input);
   if (dev && debugOn) gestureDebug.update(report, now, letters?.states());
   renderer.render(scene, camera);
+  tickPanel(performance.now() - frameStart); // incluye la lógica y el envío de dibujo
 });

@@ -36,6 +36,7 @@ export function createRibbon(letter) {
   letter.group.add(obj);
 
   let dir = 1;
+  let headPos = null; // posición en pantalla de la cabeza de la cinta (encadenamientos)
   const tmp = new THREE.Color();
 
   // El gesto define el sentido: izquierda o derecha según el trazo del barrido.
@@ -67,6 +68,7 @@ export function createRibbon(letter) {
   }
 
   function reset() {
+    headPos = null;
     col.fill(0);
     geo.attributes.color.needsUpdate = true;
   }
@@ -97,6 +99,7 @@ export function createRibbon(letter) {
           sx += Math.sin(j * 12.9898 + e) * 7;
           sy += Math.cos(j * 78.233 + e) * 7;
         }
+        if (j === 0 && e === 0) headPos = { x: sx, y: sy };
         pos[idx * 3] = (sx - letter.pos.x) / sc;
         pos[idx * 3 + 1] = (sy - letter.pos.y) / sc;
         const bright = (e === 0 ? 0.95 : 0.45 / e) * smooth(0, 0.06, tt);
@@ -124,5 +127,6 @@ export function createRibbon(letter) {
     geo.attributes.color.needsUpdate = true;
   }
 
-  return { start, conjured, awake, reset };
+  const head = () => headPos;
+  return { start, conjured, awake, reset, head };
 }

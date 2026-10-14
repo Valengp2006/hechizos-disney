@@ -53,6 +53,12 @@ class Letter {
     this.lift = 0; // cuánto empuja el hechizo al polvo ambiental (0..1)
     this.warmth = 0; // cuánto dora el hechizo al polvo ambiental (0..1)
     this.chargeLevel = 0; // 0..1: cuánto lleva agarrada la letra (solo Y lo usa)
+    this.progress = 0;    // 0..1: avance del hechizo mientras está encantada
+    this.cheerT = 1e9;    // ms desde el último saltito de alegría (letra despierta)
+    this.exciteT = 1e9;   // ms desde el último avivamiento (letra aún dormida)
+    this.prevState = STATE.LATENT;
+    this.reached = new Set(); // letras que mi hechizo ya tocó (una vez por conjuro)
+    this.peers = [];
 
     // Contorno (línea fina) y puntos muestreados: la letra "ya construida".
     this.lineMat = new THREE.LineBasicMaterial({
@@ -157,12 +163,17 @@ class Letter {
   // `trail` es el trazo del gesto (px de pantalla): algunos hechizos lo usan (p. ej. la cinta).
   conjure(trail, info) { this.set(STATE.CONJURED); this.spell?.start?.(trail, info); }
   awaken() { this.set(STATE.AWAKE); }
-  reset() { this.set(STATE.LATENT); this.spell?.reset(); }
+  reset() { this.set(STATE.LATENT); this.spell?.reset(); this.reached.clear(); }
+  // Contagio: una letra despierta da un saltito; una dormida se aviva un instante.
+  cheer() { this.cheerT = 0; }
+  excite() { this.exciteT = 0; }
 
   // `near`: el punto de atención está cerca (solo importa en latente/sensible).
   update(dtMs, timeS, near) {
     const L = CONFIG.letters;
     this.stateT += dtMs;
+    this.cheerT += dtMs;
+    this.exciteT += dtMs;
 
     if (this.state === STATE.LATENT || this.state === STATE.SENSITIVE) {
       this.state = near ? STATE.SENSITIVE : STATE.LATENT;
@@ -202,6 +213,7 @@ class Letter {
           stretch = o.stretch ?? 1;
           this.lift = o.lift ?? 0;
           this.warmth = o.warmth ?? 0;
+          this.progress = k;
           this.flashMat.size = this.flashBase * o.flashScale;
           if (k >= 1) this.awaken();
           break;
@@ -228,6 +240,19 @@ class Letter {
       default: break;
     }
 
+    // Contagio: saltito de alegría (despierta) o avivamiento (dormida), por reglas fijas.
+    const cheerP = this.cheerT < 500 ? Math.sin((Math.PI * this.cheerT) / 500) : 0;
+    const exciteP = this.exciteT < 900 ? 1 - this.exciteT / 900 : 0;
+    if (this.state === STATE.AWAKE && cheerP > 0) {
+      lineOp = Math.min(1, lineOp * (1 + 0.6 * cheerP));
+      stretch *= 1 + 0.1 * cheerP;
+    } else if ((this.state === STATE.LATENT || this.state === STATE.SENSITIVE ||
+                this.state === STATE.LISTENING) && exciteP > 0) {
+      dustOp += 0.5 * exciteP;
+      lineOp = Math.max(lineOp, 0.3 * exciteP);
+      pointOp = Math.max(pointOp, 0.2 * exciteP);
+      tremble = Math.max(tremble, L.trembleAmplitude * exciteP);
+    }
     this.setStretch(stretch);
     // Carga (agarre sostenido): el hechizo muestra que se está preparando.
     if (this.spell?.charge && this.state !== STATE.CONJURED && this.state !== STATE.AWAKE) {
@@ -257,7 +282,7 @@ class Letter {
 export function createLetters(font) {
   const letters = [...CONFIG.font.word].map((ch, i) => new Letter(ch, font, i));
   const group = new THREE.Group();
-  letters.forEach((l) => group.add(l.group));
+  letters.forEach((l) => { group.add(l.group); l.peers = letters; });
   let screen = { w: window.innerWidth, h: window.innerHeight };
 
   function layout(w, h) {
@@ -291,6 +316,7 @@ export function createLetters(font) {
         : Math.max(0, l.chargeLevel - dtMs / 200);
       l.update(dtMs, timeS, l === target);
     }
+    chains();
   }
 
   // Un gesto reconocido llega con su trazo. Lo recibe la letra (latente/sensible) que el
@@ -319,6 +345,49 @@ export function createLetters(font) {
     if (l.gesture === name) { l.conjure(trail, info); return { letter: l.char, result: 'conjure', ...dbg }; }
     l.listen();
     return { letter: l.char, result: 'listen', ...dbg };
+  }
+
+  // ---- Encadenamientos: "la alegría se contagia" (reglas fijas contacto -> efecto) ----
+  const center = (l) => ({
+    x: l.pos.x + (l.shape.width * l.scale) / 2,
+    y: l.pos.y + (l.shape.height * l.scale) / 2,
+  });
+  const asleep = (l) => l.state === STATE.LATENT || l.state === STATE.SENSITIVE || l.state === STATE.LISTENING;
+  function react(l) { if (l.state === STATE.AWAKE) l.cheer(); else if (asleep(l)) l.excite(); }
+
+  function chains() {
+    for (const src of letters) {
+      const live = src.state === STATE.CONJURED;
+      if (!live) src.reached.clear();
+      // 1) Las ondas de la D, al pasar sobre otra letra, la avivan (o la hacen saltar).
+      if (live && src.spell?.reach) {
+        const c = center(src), r = src.spell.reach();
+        for (const o of letters) {
+          if (o === src || src.reached.has(o)) continue;
+          const oc = center(o);
+          const half = 0.5 * Math.max(o.shape.width, o.shape.height) * o.scale;
+          if (Math.hypot(oc.x - c.x, oc.y - c.y) - half <= r) { src.reached.add(o); react(o); }
+        }
+      }
+      // 2) La cinta de la S, al cruzar una letra despierta, la hace saltar.
+      if (live && src.spell?.head) {
+        const h = src.spell.head();
+        if (h) for (const o of letters) {
+          if (o === src || src.reached.has(o) || o.state !== STATE.AWAKE) continue;
+          if (o.distanceTo(h.x, h.y) < 24) { src.reached.add(o); o.cheer(); }
+        }
+      }
+      // 3) La chispa de la N llega a la letra más cercana y la enciende un instante.
+      const arrived = src.spell?.takeArrival?.();
+      if (arrived) react(arrived);
+    }
+    // 4) Al despertar una letra, todas las despiertas parpadean juntas: un "¡sí!" compartido.
+    for (const l of letters) {
+      if (l.state === STATE.AWAKE && l.prevState !== STATE.AWAKE) {
+        letters.forEach((o) => { if (o.state === STATE.AWAKE) o.cheer(); });
+      }
+      l.prevState = l.state;
+    }
   }
 
   const allAwake = () => letters.every((l) => l.state === STATE.AWAKE);

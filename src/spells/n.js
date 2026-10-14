@@ -16,6 +16,7 @@ const clamp01 = (v) => Math.min(1, Math.max(0, v));
 const smooth = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); };
 const START = 0.08;
 const ECHOES = 6;
+const SEND = 0.17; // fracción de la duración que tarda la chispa en llegar a la letra vecina
 
 export function createSparks(letter) {
   const cfg = CONFIG.spells;
@@ -57,13 +58,41 @@ export function createSparks(letter) {
   const S = cfg.sparkStars;
   const stars = mk(cfg.sparkBounces * S, 8);
 
+  // Al final la chispa vuela a la letra más cercana (por distancia entre centros).
+  let target = null, pending = null, sent = false;
+  function nearestPeer() {
+    const sc = letter.scale;
+    const cx = letter.pos.x + (w * sc) / 2, cy = letter.pos.y + (h * sc) / 2;
+    let best = null, bd = Infinity;
+    for (const o of letter.peers) {
+      if (o === letter) continue;
+      const d = Math.hypot(o.pos.x + (o.shape.width * o.scale) / 2 - cx, o.pos.y + (o.shape.height * o.scale) / 2 - cy);
+      if (d < bd) { bd = d; best = o; }
+    }
+    return best;
+  }
+  function start() { target = nearestPeer(); pending = null; sent = false; }
+  const takeArrival = () => { const t = pending; pending = null; return t; };
+
   const tmp = new THREE.Color();
   const set = (arr, i, c, b) => { arr[i * 3] = c.r * b; arr[i * 3 + 1] = c.g * b; arr[i * 3 + 2] = c.b * b; };
 
   // Posición local de la chispa en el instante k (null si no está en el aire/asta).
   function ballAt(k) {
     if (k < wp[0].t) return null;
-    if (k >= wp[M - 1].t) return { x: wp[M - 1].x, y: wp[M - 1].y, u: 1, flying: false };
+    if (k >= wp[M - 1].t) {
+      // Envío: de la última posición al centro de la letra vecina, con un arco.
+      const u = clamp01((k - wp[M - 1].t) / SEND);
+      if (!target || k >= wp[M - 1].t + SEND) return null;
+      const sc = letter.scale;
+      const tx = (target.pos.x + (target.shape.width * target.scale) / 2 - letter.pos.x) / sc;
+      const ty = (target.pos.y + (target.shape.height * target.scale) / 2 - letter.pos.y) / sc;
+      return {
+        x: wp[M - 1].x + (tx - wp[M - 1].x) * u,
+        y: wp[M - 1].y + (ty - wp[M - 1].y) * u - 0.3 * h * Math.sin(Math.PI * u),
+        u, flying: false,
+      };
+    }
     const i = Math.min(M - 2, Math.floor((k - START) / cfg.sparkFlight));
     const u = clamp01((k - wp[i].t) / cfg.sparkFlight);
     return {
@@ -74,6 +103,7 @@ export function createSparks(letter) {
   }
 
   function reset() {
+    pending = null; sent = false;
     keys.col.fill(0); ball.col.fill(0); stars.col.fill(0);
     [keys, ball, stars].forEach((o) => { o.geo.attributes.color.needsUpdate = true; });
   }
@@ -96,7 +126,7 @@ export function createSparks(letter) {
     // Chispa y su estela (ecos en el tiempo).
     for (let e = 0; e <= ECHOES; e++) {
       const b = ballAt(k - e * 0.008);
-      const alive = b && k < wp[M - 1].t + 0.1;
+      const alive = !!b;
       if (!alive) { set(ball.col, e, letter.cAwake, 0); continue; }
       ball.pos[e * 3] = b.x; ball.pos[e * 3 + 1] = b.y;
       tmp.copy(e === 0 ? letter.cRose : letter.cAmber).lerp(letter.cAwake, 0.4);
@@ -123,6 +153,8 @@ export function createSparks(letter) {
     stars.geo.attributes.position.needsUpdate = true;
     stars.geo.attributes.color.needsUpdate = true;
 
+    // La chispa llegó: el contagio se avisa una sola vez.
+    if (!sent && target && k >= wp[M - 1].t + SEND) { sent = true; pending = target; }
     const pulse = Math.max(stemPulse[0], stemPulse[1]);
     return {
       lineOp: 0.35 + 0.65 * smooth(0, 0.4, k),
@@ -135,5 +167,5 @@ export function createSparks(letter) {
 
   function awake() { reset(); }
 
-  return { conjured, awake, reset };
+  return { start, conjured, awake, reset, takeArrival };
 }
