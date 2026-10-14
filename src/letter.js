@@ -14,6 +14,10 @@ import { CONFIG } from './config.js';
 import { letterShape } from './font.js';
 import { haloTexture, rgb } from './render.js';
 import { rng } from './dust.js';
+import { createPortal } from './spells/d.js';
+
+// Hechizos por letra. Las letras sin entrada usan el destello placeholder.
+const SPELLS = { D: createPortal };
 
 export const STATE = {
   LATENT: 'latent', SENSITIVE: 'sensitive', LISTENING: 'listening',
@@ -101,6 +105,13 @@ class Letter {
     }
     this.debug.visible = false;
     this.group.add(this.debug);
+
+    // Hechizo propio de la letra (si existe). Se crea una vez; solo se anima.
+    this.spell = SPELLS[char] ? SPELLS[char](this) : null;
+    if (this.spell?.anchor) {
+      // El destello nace donde el hechizo lo pide (p. ej. el punto de fuga del portal).
+      this.flashGeo.attributes.position.setXYZ(0, this.spell.anchor.x, this.spell.anchor.y, 0);
+    }
   }
 
   // Coloca la letra: centro en px y tamaño de em en px.
@@ -128,7 +139,7 @@ class Letter {
   listen() { this.set(STATE.LISTENING); }
   conjure() { this.set(STATE.CONJURED); }
   awaken() { this.set(STATE.AWAKE); }
-  reset() { this.set(STATE.LATENT); }
+  reset() { this.set(STATE.LATENT); this.spell?.reset(); }
 
   // `near`: el punto de atención está cerca (solo importa en latente/sensible).
   update(dtMs, timeS, near) {
@@ -158,14 +169,26 @@ class Letter {
         break;
       }
       case STATE.CONJURED: {
-        // Placeholder del hechizo: destello que se expande y deja la letra encendida.
+        dustOp = 0;
+        if (this.spell) {
+          // Hechizo real: él decide cómo se ve la letra y su destello.
+          const k = Math.min(this.stateT / CONFIG.spells.durationMs[this.char], 1);
+          const o = this.spell.conjured(k, this.stateT);
+          color = o.color;
+          lineOp = o.lineOp;
+          pointOp = o.pointOp;
+          flashOp = o.flashOp;
+          this.flashMat.size = this.flashBase * o.flashScale;
+          if (k >= 1) this.awaken();
+          break;
+        }
+        // Placeholder: destello que se expande y deja la letra encendida.
         const k = Math.min(this.stateT / L.placeholderSpellMs, 1);
         color = this.cAwake;
         lineOp = Math.min(1, k * 3);
         pointOp = lineOp * 0.8;
         flashOp = (1 - k) * (1 - k);
         this.flashMat.size = this.flashBase * (0.4 + 1.4 * k);
-        dustOp = 0;
         if (k >= 1) this.awaken();
         break;
       }
@@ -175,6 +198,7 @@ class Letter {
         lineOp = L.awakeOpacityMin + (L.awakeOpacityMax - L.awakeOpacityMin) * breath;
         pointOp = lineOp * 0.7;
         dustOp = 0;
+        this.spell?.awake(this.stateT, breath);
         break;
       }
       default: break;

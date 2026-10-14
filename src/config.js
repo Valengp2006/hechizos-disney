@@ -155,6 +155,12 @@ export const CONFIG = {
   spells: {
     durationMs: { D: 4000, I: 4000, S: 5000, N: 3000, E: 5000, Y: 6000 },
     portalCopies: 12,         // D: copias del contorno hacia el fondo
+    portalScaleStep: 0.78,    // D: escala de cada copia respecto a la anterior (más alto = túnel más largo)
+    portalTwistDeg: 14,       // D: giro (grados) entre copias consecutivas
+    portalFlow: 3,            // D: copias por segundo que "caen" por el túnel
+    portalCenter: { x: 0.55, y: 0.5 }, // D: punto de fuga dentro de la letra (fracción de su caja)
+    portalRemnantScale: 0.22, // D: tamaño de la copia que queda girando en la panza
+    portalRemnantSpinDeg: 40, // D: velocidad de giro de esa copia (grados/s)
     riseSpeed: 90,            // I: velocidad de ascenso del polvo (px/s)
     ribbonLength: 160,        // S: largo de la cinta (muestras)
     constellation: {          // Y: constelación-árbol
