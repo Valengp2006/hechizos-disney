@@ -6,6 +6,9 @@ import { CONFIG } from './config.js';
 import { loadFont, wordShapes } from './font.js';
 import { onModeChange, tickPanel } from './mode.js';
 import { initAudio } from './audio.js';
+import { input, initInput, updateInput } from './input.js';
+import { createDust } from './dust.js';
+import { createLightPoint } from './render.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -75,6 +78,13 @@ window.addEventListener('keydown', (e) => {
 });
 
 initAudio();
+initInput();
+
+// ---------- Luz y polvo (Hito 3) ----------
+const dust = createDust();
+const light = createLightPoint();
+scene.add(dust.object, light.object);
+const clock = new THREE.Clock();
 
 function resize() {
   const w = window.innerWidth;
@@ -83,6 +93,7 @@ function resize() {
   // top=0, bottom=h: el eje y crece hacia abajo, como en el mouse.
   camera.left = 0; camera.right = w; camera.top = 0; camera.bottom = h;
   camera.updateProjectionMatrix();
+  dust.resize(w, h);
   buildDebug();
 }
 window.addEventListener('resize', resize);
@@ -92,5 +103,9 @@ resize();
 
 renderer.setAnimationLoop(() => {
   tickPanel();
+  const dt = Math.min(clock.getDelta(), 0.1); // tope: una pestaña dormida no hace saltar nada
+  updateInput(dt);
+  dust.update(dt, clock.elapsedTime, input);
+  light.update(input);
   renderer.render(scene, camera);
 });

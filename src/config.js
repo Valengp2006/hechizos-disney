@@ -51,10 +51,22 @@ export const CONFIG = {
       ice: [170, 210, 255],     // azul hielo
       awake: [255, 205, 110],   // dorado: letra despierta
     },
-    // Intensidad del bloom (UnrealBloomPass.strength). Más = halo más grande.
+    // Escala del halo de cada luz. Más = halo más grande y suave.
     glow: 1.2,
-    // Largo de la estela del punto de luz (en muestras). Más = trazos más largos.
+    // Largo de la estela del punto de luz (en muestras, 1 por frame). Más = trazos más largos.
     trailLength: 40,
+    // Tamaño (px) del punto de luz del jugador.
+    pointSize: 38,
+    // Semilla del polvo: fija dónde nace cada partícula (misma semilla = mismo polvo).
+    dustSeed: 7,
+    // Tamaño (px) y brillo base 0..1 del polvo. Casi invisible a propósito.
+    dustSize: 10,
+    dustOpacity: 0.09,
+    // Velocidad de deriva del polvo (px/s). 0 = quieto.
+    dustDrift: 6,
+    // Radio (px) en que el polvo se aviva al paso del punto de atención, y cuánto (0..1 extra).
+    dustReactRadius: 160,
+    dustReactGain: 0.6,
   },
 
   // ---------- Entrada ----------
