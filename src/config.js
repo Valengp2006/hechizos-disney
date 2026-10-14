@@ -3,6 +3,20 @@
 // Cada parámetro dice qué controla y qué esperar si se sube o se baja.
 
 export const CONFIG = {
+  // ---------- Tipografía ----------
+  font: {
+    // Fuente local (OFL). Provisional: ajustar los hechizos si se cambia.
+    url: 'fonts/Cinzel-Bold.woff',
+    word: 'DISNEY',
+    // Separación (px) entre puntos muestreados sobre el contorno.
+    // Menos = más puntos (más densidad de luz y más costo).
+    sampleSpacing: 6,
+    // Segmentos con que se aplana cada curva Bézier. Más = contorno más fino.
+    curveSteps: 12,
+    // Tamaño de las letras en el modo depuración, como fracción del alto de pantalla.
+    debugSizeRatio: 0.35,
+  },
+
   // ---------- Visual ----------
   visual: {
     // Fondo casi negro azulado: la oscuridad es parte del asombro.

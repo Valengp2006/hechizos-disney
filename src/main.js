@@ -3,16 +3,69 @@
 // de config.js significan lo mismo en pantalla. El origen está arriba a la izquierda.
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
+import { loadFont, wordShapes } from './font.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const [r, g, b] = CONFIG.visual.background;
-scene.background = new THREE.Color(r / 255, g / 255, b / 255);
+// setRGB con sRGB: los colores de config.js son los que se ven (sin esto three.js los aclara).
+const rgb = ([r, g, b]) => new THREE.Color().setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
+scene.background = rgb(CONFIG.visual.background);
 
 const camera = new THREE.OrthographicCamera(0, 1, 0, 1, -1000, 1000);
+
+// ---------- Modo depuración de tipografía (Hito 2) ----------
+// Tecla D: muestra/oculta contornos y puntos muestreados de las seis letras.
+const debugGroup = new THREE.Group();
+scene.add(debugGroup);
+
+const lineMat = new THREE.LineBasicMaterial({
+  color: rgb(CONFIG.visual.colors.ice),
+  transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending,
+});
+const pointMat = new THREE.PointsMaterial({
+  color: rgb(CONFIG.visual.colors.awake),
+  size: 3, sizeAttenuation: false, blending: THREE.AdditiveBlending,
+});
+
+let font = null;
+function buildDebug() {
+  debugGroup.clear();
+  if (!font) return;
+  // Se parte del tamaño por alto y se reduce si la palabra no cabe en el ancho (90%).
+  let size = window.innerHeight * CONFIG.font.debugSizeRatio;
+  let shapes = wordShapes(font, CONFIG.font.word, size);
+  let gap = size * 0.08;
+  const fit = (window.innerWidth * 0.9) /
+    (shapes.reduce((s, sh) => s + sh.width, 0) + gap * (shapes.length - 1));
+  if (fit < 1) {
+    size *= fit;
+    shapes = wordShapes(font, CONFIG.font.word, size);
+    gap = size * 0.08;
+  }
+  const total = shapes.reduce((s, sh) => s + sh.width, 0) + gap * (shapes.length - 1);
+  let x = (window.innerWidth - total) / 2;
+  const y = (window.innerHeight - shapes[0].height) / 2;
+  for (const sh of shapes) {
+    const g = new THREE.Group();
+    g.position.set(x, y, 0);
+    for (const c of sh.contours) {
+      const pts = c.points.map((p) => new THREE.Vector3(p.x, p.y, 0));
+      if (c.closed) pts.push(pts[0].clone());
+      g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat));
+    }
+    const pg = new THREE.BufferGeometry().setFromPoints(sh.points.map((p) => new THREE.Vector3(p.x, p.y, 0)));
+    g.add(new THREE.Points(pg, pointMat));
+    debugGroup.add(g);
+    x += sh.width + gap;
+  }
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'd') debugGroup.visible = !debugGroup.visible;
+});
 
 function resize() {
   const w = window.innerWidth;
@@ -21,8 +74,11 @@ function resize() {
   // top=0, bottom=h: el eje y crece hacia abajo, como en el mouse.
   camera.left = 0; camera.right = w; camera.top = 0; camera.bottom = h;
   camera.updateProjectionMatrix();
+  buildDebug();
 }
 window.addEventListener('resize', resize);
+
+loadFont().then((f) => { font = f; resize(); }).catch(console.error);
 resize();
 
 renderer.setAnimationLoop(() => {
