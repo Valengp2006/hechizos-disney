@@ -3,6 +3,28 @@
 // Cada parámetro dice qué controla y qué esperar si se sube o se baja.
 
 export const CONFIG = {
+  // ---------- Modo ----------
+  mode: {
+    // Modo con el que arranca: 'performance' (público) o 'dev' (depuración).
+    // También se puede forzar con ?dev en la URL; la tecla M lo alterna.
+    initial: 'performance',
+    // En dev, ¿se aplica el reinicio por inactividad? (en performance siempre).
+    idleResetInDev: false,
+  },
+
+  // ---------- Audio ----------
+  audio: {
+    // Loop de fondo (archivo propio o de licencia libre). Si no existe, el sistema
+    // funciona en silencio y avisa por consola.
+    url: 'audio/loop.mp3',
+    // Volumen maestro 0..1. Es el único control de nivel de todo el sistema.
+    volume: 0.6,
+    // Fundido de entrada al primer gesto y al salir del silencio (ms).
+    fadeInMs: 3000,
+    // Fundido de salida al entrar en el silencio del final (ms).
+    fadeOutMs: 800,
+  },
+
   // ---------- Tipografía ----------
   font: {
     // Fuente local (OFL). Provisional: ajustar los hechizos si se cambia.

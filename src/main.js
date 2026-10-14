@@ -4,6 +4,8 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { loadFont, wordShapes } from './font.js';
+import { onModeChange, tickPanel } from './mode.js';
+import { initAudio } from './audio.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -63,9 +65,16 @@ function buildDebug() {
   }
 }
 
+// El debug solo existe en modo dev; D lo muestra u oculta dentro de dev.
+let dev = false;
+let debugOn = true;
+const syncDebug = () => { debugGroup.visible = dev && debugOn; };
+onModeChange((d) => { dev = d; syncDebug(); });
 window.addEventListener('keydown', (e) => {
-  if (e.key.toLowerCase() === 'd') debugGroup.visible = !debugGroup.visible;
+  if (e.key.toLowerCase() === 'd') { debugOn = !debugOn; syncDebug(); }
 });
+
+initAudio();
 
 function resize() {
   const w = window.innerWidth;
@@ -82,5 +91,6 @@ loadFont().then((f) => { font = f; resize(); }).catch(console.error);
 resize();
 
 renderer.setAnimationLoop(() => {
+  tickPanel();
   renderer.render(scene, camera);
 });
