@@ -1,0 +1,212 @@
+# AGENT.md — Word as a Playable System: "Hechizos" (Disney)
+
+Este archivo es el contexto de trabajo para el agente. Léelo completo antes de tocar código. Si algo aquí contradice una instrucción puntual de Valen en el chat, manda el chat; avísale de la diferencia.
+
+## 1. Qué estamos construyendo
+
+Unidad 7 del curso (12.5% de la nota): un **sistema tipográfico jugable** hecho con tecnologías web, que usa las letras del nombre de una organización para explorar un atributo de su identidad.
+
+- **Organización:** Disney (entretenimiento y narración, público familiar e intergeneracional).
+- **Atributo:** **hacer posible lo imposible** (la animación como el lugar donde lo que no puede existir existe).
+- **Contexto de uso:** pantalla interactiva en un evento o exhibición.
+- **Entradas:** **mano con cámara y mouse, conviviendo** (misma interfaz de entrada para ambos).
+- **Verbo central del juego:** *conjurar*.
+- **Idea en una frase:** pantalla casi negra y un único punto de luz que sigue la mano o el cursor. Las letras de DISNEY no se ven. Cada letra guarda un **hechizo escondido** que se activa con un tipo de gesto y transforma la letra de una forma imposible usando solo sus propios trazos. Cuando las seis han despertado, convergen, hay un silencio, la palabra se lee entera y las astas crecen hasta formar un castillo.
+- **Efecto buscado en quien juega:** **asombro y sorpresa**. Que sea inesperado y que no se sienta como algo de la vida cotidiana.
+
+## 2. Restricciones del encargo (no negociables)
+
+1. Los elementos gráficos que construyen el significado deben **provenir de las letras**. Nada de formas externas que carguen el significado. **No se muestra el video de la cámara**: la mano es solo un punto de luz.
+2. Debe **funcionar en tiempo real en la web**.
+3. **Jugable = explorar y descubrir.** Sin puntuación, niveles ni condición de victoria. El castillo es un cierre, no una meta.
+4. La persona debe poder jugar **antes** de que se le explique la intención. Nada en pantalla explica el juego con texto.
+5. Debe poder explicarse y justificarse el modelo, sus estados y reglas, y predecirse el efecto de cambiar un parámetro.
+   - **La sorpresa es para quien juega; para Valen todo es determinista.** Cada hechizo responde a una regla fija (gesto → transformación). **No usar aleatoriedad pura que decida qué pasa.** El azar solo puede decorar (ruido en el polvo, variación visual), nunca decidir el resultado.
+   - **Todos los parámetros viven en un solo archivo de configuración.**
+
+### Propiedad intelectual
+- **No reproducir el logo de Disney, su caligrafía ni la silueta de su castillo.** Usamos una tipografía real y libre, y el castillo es uno genérico de cuento que **se construye con las formas de las letras** (astas como torres, terminales como agujas y banderines).
+- Del moodboard se toma solo el **lenguaje visual** (luz, puntos, línea fina, paleta), nunca siluetas de personajes ni composiciones concretas.
+
+## 3. Dirección visual
+
+- Pantalla casi negra (negro / azul noche / violeta profundo). La oscuridad es parte del asombro: lo que existe es lo que la luz toca.
+- Todo es luz: puntos brillantes y contorno de línea fina sin relleno. Volumen por densidad de puntos, forma por la línea.
+- Trazos largos y curvos al moverse; que fluya, no que vaya en línea recta.
+- Paleta: lila y azul hielo durante la magia, **dorado** cuando una letra queda despierta.
+- Brillo con `blendMode(ADD)` y/o `drawingContext.shadowBlur`.
+- Lo que produce asombro, a tener presente al diseñar cada momento: física imposible (luz que cae hacia arriba, letras que se vuelven líquidas), cambio de escala (entrar en una letra y encontrar un túnel), consecuencia desproporcionada (un gesto pequeño, una transformación enorme) y **silencio antes de la revelación**.
+
+## 4. Modelo del sistema
+
+### Punto de atención (entrada unificada)
+`input.js` entrega siempre lo mismo, venga del mouse o de la mano, para que el resto del sistema no sepa de dónde viene:
+
+```
+{ x, y, vx, vy, grab, source: 'mouse' | 'hand', active }
+```
+
+- **Mouse:** posición del cursor; `grab` = click sostenido.
+- **Mano (ml5.js HandPose):** punta del índice como punto; `grab` = pellizco (distancia pulgar–índice por debajo de un umbral).
+- Conviven: si la mano está presente, manda la mano; si no, el mouse.
+- La mano necesita **suavizado** (los landmarks tiemblan y la velocidad es parte de la mecánica; un filtro tipo lerp o One Euro), **espejo** en el eje x y un punto de luz como única representación visual.
+
+### Reconocimiento de gestos
+Se evalúa la **trayectoria de la última ventana de tiempo** (~1 s) del punto de atención. Todo determinista y con tolerancias en `config.js`.
+
+| Gesto | Cómo se reconoce |
+|---|---|
+| Círculo | ángulo acumulado alrededor del centro de la trayectoria ≥ ~300° con radio razonablemente constante |
+| Subir | desplazamiento vertical hacia arriba dominante, recorrido mínimo, poca desviación lateral |
+| Barrido horizontal | desplazamiento horizontal dominante y recorrido mínimo |
+| Zigzag | al menos N cambios de signo de la velocidad horizontal con amplitud mínima |
+| Quedarse quieto | velocidad por debajo de un umbral durante T segundos |
+| Agarrar y soltar | `grab` pasa de verdadero a falso (mantenido un tiempo mínimo antes de soltar) |
+
+Tener un **panel de depuración** (solo desarrollo, tecla `D`) que muestre la trayectoria, el gesto candidato y sus métricas, para ajustar tolerancias.
+
+### Estados de cada letra
+| Estado | Qué ocurre |
+|---|---|
+| Latente | invisible; solo polvo tenue en su zona |
+| Sensible | el punto de atención está cerca: el polvo de esa letra se **estremece** ("aquí hay algo") |
+| Escuchando | gesto parcial o equivocado: la letra se **entreabre** un instante y se apaga |
+| Conjurada | gesto correcto: el hechizo se ejecuta |
+| Despierta | terminado el hechizo, queda encendida en dorado, respirando |
+
+### Las letras
+Cada letra empieza en un lugar y tamaño **distintos** de la oscuridad (no en línea). La posición final de la palabra es otra y se usa en la convergencia.
+
+## 5. Los seis hechizos
+
+Todo sale de los trazos de la letra (contorno de la tipografía + puntos muestreados). Las filas de D, I y S son las más importantes; todas se prototipan.
+
+| Letra | Gesto | Qué pasa | De dónde sale |
+|---|---|---|---|
+| **D** | círculo | **Portal.** La panza se abre y su contorno se repite hacia el fondo, cada vez más pequeño y girando, como un túnel de luz | copias escaladas y rotadas de su propio contorno |
+| **I** | subir | **Gravedad invertida.** El asta se estira hacia arriba y suelta polvo de luz que asciende en lugar de caer | puntos muestreados del asta |
+| **S** | barrido horizontal | **Cinta.** La S se desenrolla y nada por la pantalla siguiendo la trayectoria | su curva convertida en estela |
+| **N** | zigzag | **Relámpago.** La diagonal se vuelve una descarga que salta entre las dos astas | su diagonal con ruido |
+| **E** | quedarse quieto | **Faro.** Los tres brazos se alargan y barren la oscuridad como rayos | sus brazos, extendidos |
+| **Y** | agarrar y soltar | **Constelación-árbol.** La bifurcación se repite recursivamente y florece | sus propios trazos, reducidos y repetidos |
+
+Estos efectos dependen de la tipografía elegida; ajustar tras decidirla.
+
+### Encadenamientos (los hechizos se afectan entre sí)
+- La cinta de la S, si pasa por el portal de la D, es absorbida y sale girando en espiral por el túnel.
+- Si la cinta cruza la columna de la I, sube con ella.
+- Una chispa del relámpago de la N enciende los brazos de la E.
+
+Los encadenamientos también son reglas deterministas (condición de contacto → efecto).
+
+### Final
+1. Cuando las seis letras están despiertas, **convergen volando** hacia su lugar en la palabra.
+2. **Silencio:** un instante de quietud donde la palabra se lee entera.
+3. **Revelación:** las astas crecen, torres y agujas se dibujan detrás con línea fina y puntos, y la palabra queda al frente.
+4. **Reposo:** todo respira. Tras un tiempo sin interacción, el castillo se apaga y todo vuelve a la oscuridad para el siguiente visitante.
+
+## 6. Parámetros (todos en `src/config.js`)
+
+Cada uno debe poder ajustarse con efecto predecible; esto sustenta el criterio de "comprensión y verificación".
+
+- **Gestos:** ventana de tiempo, ángulo mínimo del círculo, recorrido mínimo de subir y barrido, cambios de signo mínimos del zigzag, umbral de quietud y su duración, umbral de pellizco.
+- **Sensibilidad:** radio de "sensible", duración del estado "escuchando".
+- **Mano:** factor de suavizado, umbral de confianza de la detección.
+- **Hechizos:** duración de cada uno, cantidad de copias del portal, velocidad de ascenso del polvo de la I, longitud de la cinta, ramas y profundidad de la constelación.
+- **Final:** duración de la convergencia, del silencio y de la revelación; tiempo de inactividad antes de reiniciar.
+- **Visual:** cantidad de partículas, colores por estado, intensidad del brillo.
+
+Para la bitácora, cada cambio de parámetro se registra como **hipótesis antes, observación después**.
+
+## 7. Stack y estructura del repo
+
+- **Vite** (vanilla JS, módulos ES) + **p5.js** (npm) + **opentype.js** (contornos y muestreo de la tipografía) + **ml5.js** (HandPose).
+- **Verifica la API actual de ml5 HandPose en su documentación antes de implementar**; cambia entre versiones.
+- Tipografía **local** en `public/fonts/` con licencia libre (OFL). **Aún sin elegir.** Candidatas: Cormorant Garamond, Cinzel, Playfair Display. Probar "DISNEY" en mayúsculas con cada una y mirar si astas y remates se prestan a convertirse en torres.
+- La cámara exige **HTTPS** (GitHub Pages lo cumple; en local, `localhost` también). No se guarda ni se transmite nada de la cámara.
+- Debe poder desplegarse en **GitHub Pages**.
+
+```
+/
+├── AGENT.md
+├── README.md
+├── package.json
+├── vite.config.js
+├── index.html
+├── public/
+│   └── fonts/
+├── src/
+│   ├── main.js            # arranque, ciclo de p5
+│   ├── config.js          # TODOS los parámetros
+│   ├── font.js            # fuente, contornos, muestreo de puntos
+│   ├── input.js           # entrada unificada (mouse + mano)
+│   ├── hand.js            # ml5 HandPose, suavizado, espejo, pellizco
+│   ├── gestures.js        # reconocimiento de gestos por trayectoria
+│   ├── letter.js          # letra: estados y transiciones
+│   ├── spells/            # un archivo por hechizo (d.js, i.js, s.js, n.js, e.js, y.js)
+│   ├── chains.js          # encadenamientos entre hechizos
+│   ├── finale.js          # convergencia, silencio, castillo, reposo
+│   ├── dust.js            # polvo ambiental
+│   └── render.js          # brillo, estelas, colores
+└── docs/
+    ├── bitacora/
+    └── referentes.md      # moodboard, Word as Image, Playables
+```
+
+Es una propuesta: si algo se ve mejor distinto, proponlo y explica por qué antes de cambiarlo.
+
+## 8. Plan de trabajo (por hitos, uno a la vez)
+
+Valen quiere **prototipar las seis letras**. Primero toda la tubería (entrada, gestos, estados) y luego los seis hechizos a nivel de prototipo, para pulir después con el resto del tiempo. Trabaja **un hito por vez**, deja que Valen lo pruebe en el navegador y espera su visto bueno. Un commit por hito.
+
+1. **Repo y esqueleto:** `git init`, Vite + p5 + opentype.js + ml5, `.gitignore`, README básico, canvas oscuro a pantalla completa, estructura de carpetas, `config.js` con la lista de parámetros.
+2. **Tipografía y muestreo:** cargar una fuente provisional, extraer contornos de las seis letras y muestrear puntos. Modo de depuración que dibuja contornos y puntos.
+3. **Punto de luz con mouse:** entrada unificada (`input.js`), punto con estela, polvo ambiental casi invisible.
+4. **Reconocedor de gestos:** los seis gestos sobre la trayectoria, con panel de depuración. Verificar cada uno con el mouse antes de seguir.
+5. **Entrada por mano:** HandPose con suavizado, espejo y pellizco, alimentando el mismo `input.js`. Verificar que los gestos funcionan igual que con mouse y ajustar tolerancias.
+6. **Ciclo de letra:** seis letras en posiciones y tamaños distintos con los estados latente, sensible, escuchando, conjurada y despierta. El hechizo es un placeholder (encendido dorado con destello) para que todo el flujo funcione de punta a punta.
+7. **Hechizos, uno por uno, en este orden:** D (portal), I (gravedad invertida), S (cinta), N (relámpago), E (faro), Y (constelación-árbol). Prototipo de cada uno, probado antes del siguiente.
+8. **Encadenamientos** entre hechizos.
+9. **Final:** convergencia, silencio, castillo desde las letras, reposo y reinicio.
+10. **Pulido y pruebas con otras personas:** ritmo, momentos de lectura, rendimiento, iluminación de la sala con la cámara, despliegue en GitHub Pages.
+
+## 9. Decisiones abiertas (pregúntale a Valen, no asumas)
+
+- **Tipografía final** (los hechizos se ajustan a sus formas).
+- **Destellos de cuatro puntas:** el encargo pide que los elementos gráficos salgan de las letras. Opciones: (a) formarlos con trazos de la propia letra, (b) dibujarlos como elemento externo y registrarlo en la bitácora como decisión consciente.
+- Tamaño y relación de aspecto de la pantalla del evento.
+- Sonido (por ahora no; un proyecto de asombro podría beneficiarse, pero es otra entrada y otro alcance).
+
+## 10. Cómo trabajar con Valen
+
+- Valen está en 6.º semestre de Ingeniería en Diseño de Entretenimiento Digital (UPB) y viene de proyectos con p5.js, ml5.js y Three.js. Puede seguir código, pero **tiene que poder explicarlo**: comenta el *porqué* de cada regla, no solo el qué.
+- Código simple y legible antes que ingenioso. Funciones pequeñas con nombres que reflejen el modelo (`conjure`, `awaken`, `listen`, `converge`).
+- Cada regla del sistema debe localizarse en un solo lugar y ajustarse desde `config.js`.
+- No agregues dependencias sin preguntar.
+- Responde y comenta en español.
+- Antes de un cambio grande, resume el plan en pocas líneas y espera confirmación.
+- Al terminar cada hito, di qué probar en el navegador y qué parámetro mover para ver su efecto.
+- Los hechizos son lo más creativo del proyecto: antes de programar uno, describe en pocas líneas cómo lo harás y espera el visto bueno de Valen.
+
+## 11. Bitácora (obligatoria, no se califica por separado)
+
+Valen debe registrar en su bitácora de GitHub referentes, bocetos, experimentos, decisiones y pruebas. Ayúdale a mantenerla:
+
+- Al cerrar cada hito, propón una entrada corta en `docs/bitacora/` con fecha, qué se hizo, qué se decidió y por qué, y qué se observó.
+- Para cada cambio de parámetro o de regla: **hipótesis antes, observación después**.
+- Registra las pruebas con otras personas: qué intentaron, qué descubrieron, qué gestos probaron antes de dar con el correcto, cómo interpretaron las respuestas.
+- Registra el cambio de concepto: se partió de "dar vida a lo inanimado / cuidar" y se pasó a "hacer posible lo imposible / conjurar" porque la primera mecánica se sentía de gestión y no mágica, y lo buscado era asombro. Es una decisión de diseño que vale la pena dejar escrita con su razón.
+
+### Autoevaluación (lista antes de presentar)
+Cada criterio de 0 a 25 puntos, con evidencias:
+1. **Cumplimiento del encargo:** letras del nombre, jugable, tiempo real en la web, contexto definido.
+2. **Comprensión y verificación:** explicar y justificar modelo, estados y reglas; predecir y verificar el efecto de cambiar una regla o parámetro.
+3. **Interacción e identidad:** qué permiten descubrir las acciones sobre el atributo elegido, contrastado con las pruebas con otras personas.
+4. **Resolución tipográfica y experiencia de juego:** composición, ritmo, momentos de lectura y respuestas perceptibles.
+
+### Base para justificar el atributo
+"Hacer posible lo imposible" se apoya en la historia de la animación de Disney: el lugar donde lo que no puede existir existe. Valen debe **buscar y citar una fuente verificada** (por ejemplo, textos sobre los principios de animación de Frank Thomas y Ollie Johnston en *The Illusion of Life*, o fuentes sobre la idea de lo "plausiblemente imposible" en la animación de Disney), confirmando la cita antes de usarla. Que el asombro surja de **conjurar** con un gesto es una decisión de diseño de Valen construida sobre esa base.
+
+## 12. Presentación
+
+Se presenta el sistema funcionando y **se invita a alguien a jugar antes de explicar la intención**. Esa persona cuenta qué intentó, qué descubrió y cómo interpretó las respuestas. Después se explica la organización, el atributo y el contexto, y cómo las decisiones tipográficas, los gestos y los hechizos permiten explorar esa identidad. Todo en el diseño debe sostener esa secuencia: sin instrucciones en pantalla, con pistas perceptibles (el polvo que se estremece, la letra que se entreabre) en lugar de texto.

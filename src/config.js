@@ -1,0 +1,90 @@
+// config.js — TODOS los parámetros del sistema viven aquí.
+// Regla: ninguna otra pieza del código tiene números "mágicos".
+// Cada parámetro dice qué controla y qué esperar si se sube o se baja.
+
+export const CONFIG = {
+  // ---------- Visual ----------
+  visual: {
+    // Fondo casi negro azulado: la oscuridad es parte del asombro.
+    background: [4, 3, 10],
+    // Cantidad de partículas de polvo ambiental. Más = más "atmósfera" y más costo de render.
+    dustCount: 400,
+    // Colores por estado de la letra (RGB).
+    colors: {
+      magic: [190, 170, 255],   // lila durante la magia
+      ice: [170, 210, 255],     // azul hielo
+      awake: [255, 205, 110],   // dorado: letra despierta
+    },
+    // Intensidad del brillo (shadowBlur en px). Más = halo más grande.
+    glow: 18,
+    // Largo de la estela del punto de luz (en muestras). Más = trazos más largos.
+    trailLength: 40,
+  },
+
+  // ---------- Entrada ----------
+  hand: {
+    // Suavizado 0..1. Más cerca de 1 = más suave pero con más retraso.
+    smoothing: 0.6,
+    // Confianza mínima de la detección para aceptar la mano.
+    minConfidence: 0.7,
+    // Distancia pulgar–índice (px) por debajo de la cual hay pellizco (grab).
+    pinchThreshold: 40,
+  },
+
+  // ---------- Gestos (se evalúan sobre la última ventana de tiempo) ----------
+  gestures: {
+    // Ventana de trayectoria analizada (ms).
+    windowMs: 1000,
+    circle: {
+      minAngleDeg: 300,       // ángulo acumulado mínimo para contar como círculo
+      radiusTolerance: 0.35,  // variación relativa máxima del radio
+    },
+    rise: {
+      minDistance: 160,       // recorrido vertical mínimo (px) hacia arriba
+      maxLateralRatio: 0.35,  // desviación lateral máxima / recorrido vertical
+    },
+    sweep: {
+      minDistance: 240,       // recorrido horizontal mínimo (px)
+      maxVerticalRatio: 0.35, // desviación vertical máxima / recorrido horizontal
+    },
+    zigzag: {
+      minSignChanges: 4,      // cambios de signo de la velocidad horizontal
+      minAmplitude: 40,       // amplitud mínima de cada vaivén (px)
+    },
+    still: {
+      speedThreshold: 12,     // velocidad (px/s) por debajo de la cual está quieto
+      durationMs: 1200,       // tiempo mínimo quieto
+    },
+    grab: {
+      minHoldMs: 250,         // tiempo mínimo agarrado antes de soltar
+    },
+  },
+
+  // ---------- Letras ----------
+  letters: {
+    // Distancia (px) al punto de atención para pasar a "sensible".
+    sensitiveRadius: 140,
+    // Cuánto dura el estado "escuchando" (letra entreabierta) antes de apagarse (ms).
+    listeningMs: 600,
+  },
+
+  // ---------- Hechizos ----------
+  spells: {
+    durationMs: { D: 4000, I: 4000, S: 5000, N: 3000, E: 5000, Y: 6000 },
+    portalCopies: 12,         // D: copias del contorno hacia el fondo
+    riseSpeed: 90,            // I: velocidad de ascenso del polvo (px/s)
+    ribbonLength: 160,        // S: largo de la cinta (muestras)
+    constellation: {          // Y: constelación-árbol
+      branches: 2,            // ramas por bifurcación
+      depth: 4,               // niveles de recursión
+    },
+  },
+
+  // ---------- Final ----------
+  finale: {
+    convergeMs: 3000,         // letras vuelan a su lugar en la palabra
+    silenceMs: 2000,          // quietud: la palabra se lee entera
+    revealMs: 5000,           // astas crecen y aparece el castillo
+    idleResetMs: 30000,       // sin interacción -> todo vuelve a la oscuridad
+  },
+};
