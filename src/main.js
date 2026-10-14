@@ -9,6 +9,8 @@ import { initAudio } from './audio.js';
 import { input, initInput, updateInput } from './input.js';
 import { createDust } from './dust.js';
 import { createLightPoint } from './render.js';
+import { createRecognizer } from './gestures.js';
+import { createGestureDebug } from './debug.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -71,7 +73,12 @@ function buildDebug() {
 // El debug solo existe en modo dev; D lo muestra u oculta dentro de dev.
 let dev = false;
 let debugOn = true;
-const syncDebug = () => { debugGroup.visible = dev && debugOn; };
+const gestureDebug = createGestureDebug();
+scene.add(gestureDebug.object);
+const syncDebug = () => {
+  debugGroup.visible = dev && debugOn;
+  gestureDebug.setVisible(dev && debugOn);
+};
 onModeChange((d) => { dev = d; syncDebug(); });
 window.addEventListener('keydown', (e) => {
   if (e.key.toLowerCase() === 'd') { debugOn = !debugOn; syncDebug(); }
@@ -85,6 +92,11 @@ const dust = createDust();
 const light = createLightPoint();
 scene.add(dust.object, light.object);
 const clock = new THREE.Clock();
+const recognizer = createRecognizer();
+// Aquí se conectarán las letras (Hito 6): cada gesto reconocido llega con su nombre.
+function onGesture(name) {
+  if (dev) console.log('[gesto]', name);
+}
 
 function resize() {
   const w = window.innerWidth;
@@ -107,5 +119,9 @@ renderer.setAnimationLoop(() => {
   updateInput(dt);
   dust.update(dt, clock.elapsedTime, input);
   light.update(input);
+  const now = performance.now();
+  const { fired, report } = recognizer.push(input, now);
+  if (fired) onGesture(fired);
+  if (dev && debugOn) gestureDebug.update(report, now);
   renderer.render(scene, camera);
 });

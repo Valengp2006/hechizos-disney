@@ -83,17 +83,23 @@ export const CONFIG = {
   gestures: {
     // Ventana de trayectoria analizada (ms).
     windowMs: 1000,
+    // Tras reconocer un gesto, pausa (ms) sin reconocer otro. Evita que un mismo
+    // movimiento dispare dos hechizos o repita el mismo.
+    cooldownMs: 700,
     circle: {
       minAngleDeg: 300,       // ángulo acumulado mínimo para contar como círculo
-      radiusTolerance: 0.35,  // variación relativa máxima del radio
+      radiusTolerance: 0.35,  // variación relativa máxima del radio (desv. estándar / media)
+      minRadius: 30,          // radio medio mínimo (px): un temblor no es un círculo
     },
     rise: {
       minDistance: 160,       // recorrido vertical mínimo (px) hacia arriba
-      maxLateralRatio: 0.35,  // desviación lateral máxima / recorrido vertical
+      maxLateralRatio: 0.35,  // ancho del trazo / recorrido vertical
+      minStraightness: 0.8,   // recorrido neto / alto del trazo (1 = sin vaivén)
     },
     sweep: {
       minDistance: 240,       // recorrido horizontal mínimo (px)
-      maxVerticalRatio: 0.35, // desviación vertical máxima / recorrido horizontal
+      maxVerticalRatio: 0.35, // alto del trazo / recorrido horizontal
+      minStraightness: 0.8,   // recorrido neto / ancho del trazo
     },
     zigzag: {
       minSignChanges: 4,      // cambios de signo de la velocidad horizontal
