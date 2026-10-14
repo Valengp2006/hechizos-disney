@@ -6,7 +6,7 @@ export const CONFIG = {
   // ---------- Modo ----------
   mode: {
     // Modo con el que arranca: 'performance' (público) o 'dev' (depuración).
-    // También se puede forzar con ?dev en la URL; la tecla M lo alterna.
+    // También se puede forzar con ?dev en la URL; la tecla Tab lo alterna.
     initial: 'performance',
     // En dev, ¿se aplica el reinicio por inactividad? (en performance siempre).
     idleResetInDev: false,

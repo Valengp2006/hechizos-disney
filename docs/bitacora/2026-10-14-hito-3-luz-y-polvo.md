@@ -15,4 +15,4 @@
 - Pendiente: observar `trailLength` 40 con mouse real; comprobar si la estela fluye o se ve rígida a baja velocidad.
 
 ## Aviso detectado
-- Con el modo performance por defecto, el sitio publicado se ve negro hasta que se pulsa `M` o se usa `?dev`. Es intencional; hasta el Hito 6 las letras solo existen como debug.
+- Con el modo performance por defecto, el sitio publicado se ve negro hasta que se pulsa `Tab` o se usa `?dev`. Es intencional; hasta el Hito 6 las letras solo existen como debug.

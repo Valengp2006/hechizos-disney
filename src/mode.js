@@ -43,13 +43,16 @@ export function tickPanel() {
     fps = Math.round((frames * 1000) / (now - last));
     frames = 0; last = now;
   }
-  if (dev) panel.textContent = `DEV · ${fps} fps · D debug · M modo · F pantalla completa`;
+  if (dev) panel.textContent = `DEV · ${fps} fps · D debug · Tab modo · F pantalla completa`;
 }
 onModeChange((d) => { panel.style.display = d ? 'block' : 'none'; });
 
 window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
-  if (k === 'm') toggleMode();
+  if (e.key === 'Tab') {
+    e.preventDefault(); // Tab no debe mover el foco de la página
+    if (!e.repeat) toggleMode(); // mantener Tab pulsado no debe parpadear el modo
+  }
   if (k === 'f') {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen?.();

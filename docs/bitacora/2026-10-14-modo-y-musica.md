@@ -1,7 +1,7 @@
 # 2026-10-14 — Modo performance/dev y música
 
 ## Qué se hizo
-- `src/mode.js`: modo **performance** (público: sin debug, sin cursor) y **dev** (debug, FPS). Tecla `M` o `?dev`; `F` pantalla completa.
+- `src/mode.js`: modo **performance** (público: sin debug, sin cursor) y **dev** (debug, FPS). Tecla `Tab` o `?dev`; `F` pantalla completa.
 - `src/audio.js`: loop con Web Audio, arranca con el primer gesto, volumen maestro y fundidos en `config.js`.
 
 ## Decisiones
