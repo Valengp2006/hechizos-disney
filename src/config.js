@@ -15,8 +15,8 @@ export const CONFIG = {
       ice: [170, 210, 255],     // azul hielo
       awake: [255, 205, 110],   // dorado: letra despierta
     },
-    // Intensidad del brillo (shadowBlur en px). Más = halo más grande.
-    glow: 18,
+    // Intensidad del bloom (UnrealBloomPass.strength). Más = halo más grande.
+    glow: 1.2,
     // Largo de la estela del punto de luz (en muestras). Más = trazos más largos.
     trailLength: 40,
   },
