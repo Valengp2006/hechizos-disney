@@ -29,7 +29,7 @@ export function createGestureDebug() {
   const f = (v, d = 0) => (Number.isFinite(v) ? v.toFixed(d) : '∞');
   const mark = (ok) => (ok ? '✔' : '·');
 
-  function update(report, now) {
+  function update(report, now, letterStates = '') {
     const trail = report.trail.slice(-max);
     for (let i = 0; i < trail.length; i++) {
       positions[i * 3] = trail[i].x;
@@ -48,6 +48,7 @@ export function createGestureDebug() {
       `${mark(st.pass)} still   ${f(st.speed)}/${g.still.speedThreshold}px/s  ${f(st.heldMs)}/${g.still.durationMs}ms`,
       `${mark(gr.pass)} grab    sostenido ${f(gr.heldMs)}/${g.grab.minHoldMs}ms`,
       '',
+      letterStates,
       report.lastFired
         ? `último: ${report.lastFired.toUpperCase()} hace ${f((now - report.lastFiredAt) / 1000, 1)}s${report.cooling ? '  (enfriando)' : ''}`
         : 'último: —',

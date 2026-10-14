@@ -6,7 +6,7 @@ import { CONFIG } from './config.js';
 import { haloTexture, rgb } from './render.js';
 
 // PRNG determinista (mulberry32): misma semilla, mismo polvo.
-function rng(seed) {
+export function rng(seed) {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;

@@ -30,7 +30,8 @@ export const CONFIG = {
     // Fuente local (OFL). Provisional: ajustar los hechizos si se cambia.
     url: 'fonts/Cinzel-Bold.woff',
     word: 'DISNEY',
-    // Separación (px) entre puntos muestreados sobre el contorno.
+    // Separación entre puntos muestreados sobre el contorno, medida con la letra a su
+    // tamaño de referencia (em = 200 px); después escala con la letra.
     // Menos = más puntos (más densidad de luz y más costo).
     sampleSpacing: 6,
     // Segmentos con que se aplana cada curva Bézier. Más = contorno más fino.
@@ -116,10 +117,38 @@ export const CONFIG = {
 
   // ---------- Letras ----------
   letters: {
-    // Distancia (px) al punto de atención para pasar a "sensible".
+    // Distancia (px) entre el punto de atención y la caja de la letra para "sensible".
+    // Más = la letra se delata de más lejos.
     sensitiveRadius: 140,
     // Cuánto dura el estado "escuchando" (letra entreabierta) antes de apagarse (ms).
     listeningMs: 600,
+    // Gesto que despierta a cada letra (nombres de gestures.js).
+    gestures: { D: 'circle', I: 'rise', S: 'sweep', N: 'zigzag', E: 'still', Y: 'grab' },
+    // Dónde nace cada letra: centro (fracción del ancho/alto de pantalla) y tamaño de
+    // la letra (fracción del alto de pantalla). Distintos a propósito: no están en línea.
+    layout: {
+      D: { x: 0.16, y: 0.30, size: 0.34 },
+      I: { x: 0.40, y: 0.74, size: 0.24 },
+      S: { x: 0.60, y: 0.26, size: 0.28 },
+      N: { x: 0.84, y: 0.62, size: 0.38 },
+      E: { x: 0.22, y: 0.74, size: 0.20 },
+      Y: { x: 0.62, y: 0.62, size: 0.30 },
+    },
+    // Polvo tenue que marca la zona de cada letra latente.
+    latentDustCount: 36,
+    latentDustOpacity: 0.12,
+    // Cuánto tiembla el polvo (px) cuando la letra está sensible, y su brillo extra 0..1.
+    trembleAmplitude: 5,
+    sensitiveGain: 0.5,
+    // Brillo máximo del contorno cuando la letra se entreabre (escuchando).
+    listeningOpacity: 0.55,
+    // Duración del destello placeholder del hechizo (ms); los hechizos reales usan
+    // spells.durationMs. Más = destello más lento.
+    placeholderSpellMs: 1500,
+    // Periodo (ms) de la respiración de una letra despierta, y rango de brillo.
+    breathMs: 3200,
+    awakeOpacityMin: 0.55,
+    awakeOpacityMax: 0.95,
   },
 
   // ---------- Hechizos ----------
