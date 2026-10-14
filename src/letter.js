@@ -15,9 +15,10 @@ import { letterShape } from './font.js';
 import { haloTexture, rgb } from './render.js';
 import { rng } from './dust.js';
 import { createPortal } from './spells/d.js';
+import { createGravity } from './spells/i.js';
 
 // Hechizos por letra. Las letras sin entrada usan el destello placeholder.
-const SPELLS = { D: createPortal };
+const SPELLS = { D: createPortal, I: createGravity };
 
 export const STATE = {
   LATENT: 'latent', SENSITIVE: 'sensitive', LISTENING: 'listening',
@@ -42,6 +43,10 @@ class Letter {
     this.cAwake = rgb(colors.awake);
 
     this.group = new THREE.Group();
+    // `body` es el cuerpo de la letra (contorno + puntos): lo único que se puede estirar.
+    this.body = new THREE.Group();
+    this.group.add(this.body);
+    this.lift = 0; // cuánto empuja el hechizo al polvo ambiental (0..1)
 
     // Contorno (línea fina) y puntos muestreados: la letra "ya construida".
     this.lineMat = new THREE.LineBasicMaterial({
@@ -51,13 +56,13 @@ class Letter {
     for (const c of this.shape.contours) {
       const pts = c.points.map((p) => new THREE.Vector3(p.x, p.y, 0));
       if (c.closed) pts.push(pts[0].clone());
-      this.group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), this.lineMat));
+      this.body.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), this.lineMat));
     }
     this.pointMat = new THREE.PointsMaterial({
       map: haloTexture(), color: this.cMagic, transparent: true, opacity: 0, depthWrite: false,
       blending: THREE.AdditiveBlending, size: 7, sizeAttenuation: false,
     });
-    this.group.add(new THREE.Points(
+    this.body.add(new THREE.Points(
       new THREE.BufferGeometry().setFromPoints(this.shape.points.map((p) => new THREE.Vector3(p.x, p.y, 0))),
       this.pointMat,
     ));
@@ -104,7 +109,7 @@ class Letter {
       this.debug.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), this.debugMat));
     }
     this.debug.visible = false;
-    this.group.add(this.debug);
+    this.body.add(this.debug);
 
     // Hechizo propio de la letra (si existe). Se crea una vez; solo se anima.
     this.spell = SPELLS[char] ? SPELLS[char](this) : null;
@@ -133,6 +138,12 @@ class Letter {
     return Math.hypot(dx, dy);
   }
 
+  // Estira el cuerpo hacia arriba manteniendo fija la base de la letra.
+  setStretch(s) {
+    this.body.scale.y = s;
+    this.body.position.y = this.shape.height * (1 - s);
+  }
+
   set(state) { this.state = state; this.stateT = 0; }
 
   // --- transiciones (nombres del modelo) ---
@@ -152,6 +163,8 @@ class Letter {
 
     let lineOp = 0, pointOp = 0, dustOp = L.latentDustOpacity, tremble = 0, flashOp = 0;
     let color = this.cMagic;
+    let stretch = 1;
+    this.lift = 0;
 
     switch (this.state) {
       case STATE.SENSITIVE:
@@ -178,6 +191,8 @@ class Letter {
           lineOp = o.lineOp;
           pointOp = o.pointOp;
           flashOp = o.flashOp;
+          stretch = o.stretch ?? 1;
+          this.lift = o.lift ?? 0;
           this.flashMat.size = this.flashBase * o.flashScale;
           if (k >= 1) this.awaken();
           break;
@@ -204,6 +219,7 @@ class Letter {
       default: break;
     }
 
+    this.setStretch(stretch);
     this.lineMat.color.copy(color);
     this.pointMat.color.copy(color);
     this.lineMat.opacity = lineOp;
@@ -257,24 +273,40 @@ export function createLetters(font) {
     for (const l of letters) l.update(dtMs, timeS, l === target);
   }
 
-  // Un gesto reconocido llega con su trazo; lo recibe la letra más cercana al trazo.
+  // Un gesto reconocido llega con su trazo. Lo recibe la letra (latente/sensible) que el
+  // final del trazo (gestureTargetMs) toca más de cerca: menor distancia entre un punto
+  // del trazo y su caja. Ni el centro ni el inicio sirven: se contaminan con la aproximación.
   function handleGesture(name, trail, input) {
-    let x = input.x, y = input.y;
+    let pts = [{ x: input.x, y: input.y }];
     if (trail && trail.length) {
-      x = trail.reduce((s, p) => s + p.x, 0) / trail.length;
-      y = trail.reduce((s, p) => s + p.y, 0) / trail.length;
+      const tEnd = trail[trail.length - 1].t;
+      const recent = trail.filter((p) => p.t >= tEnd - CONFIG.letters.gestureTargetMs);
+      pts = recent.length ? recent : trail;
     }
-    const l = nearest(x, y) || target;
+    let l = null, bestD = CONFIG.letters.sensitiveRadius;
+    const dists = [];
+    for (const c of letters) {
+      if (c.state !== STATE.LATENT && c.state !== STATE.SENSITIVE) continue;
+      let d = Infinity;
+      for (let i = 0; i < pts.length; i += 3) d = Math.min(d, c.distanceTo(pts[i].x, pts[i].y));
+      d = Math.min(d, c.distanceTo(pts[pts.length - 1].x, pts[pts.length - 1].y));
+      dists.push(`${c.char}:${Math.round(d)}`);
+      if (d <= bestD) { l = c; bestD = d; }
+    }
+    const x = pts[pts.length - 1].x, y = pts[pts.length - 1].y;
+    const info = { x, y, n: pts.length, dists: dists.join(' ') };
     if (!l) return null;
-    if (l.gesture === name) { l.conjure(); return { letter: l.char, result: 'conjure' }; }
+    if (l.gesture === name) { l.conjure(); return { letter: l.char, result: 'conjure', ...info }; }
     l.listen();
-    return { letter: l.char, result: 'listen' };
+    return { letter: l.char, result: 'listen', ...info };
   }
 
   const allAwake = () => letters.every((l) => l.state === STATE.AWAKE);
   const reset = () => letters.forEach((l) => l.reset());
+  // Empuje del hechizo sobre el polvo ambiental: el mayor de las letras en curso.
+  const lift = () => Math.max(0, ...letters.map((l) => l.lift));
   const setDebug = (v) => letters.forEach((l) => { l.debug.visible = v; });
   const states = () => letters.map((l) => `${l.char}:${l.state}`).join('  ');
 
-  return { object: group, layout, update, handleGesture, allAwake, reset, setDebug, states, letters };
+  return { object: group, layout, update, handleGesture, allAwake, reset, lift, setDebug, states, letters };
 }

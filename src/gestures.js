@@ -147,11 +147,23 @@ export function createRecognizer(cfg = CONFIG.gestures) {
     while (samples.length && samples[0].t < now - keepMs) samples.shift();
 
     const win = samples.filter((s) => s.t >= now - cfg.windowMs);
+    // Cada trazo se mide sobre la ventana completa y sobre sufijos más recientes. Pasa si
+    // pasa en alguno; el resultado conserva el trozo que lo cumplió (`trail`).
+    const slices = cfg.windowFractions.map((f) => win.filter((s) => s.t >= now - cfg.windowMs * f));
+    const pick = (fn) => {
+      let first = null;
+      for (const sl of slices) {
+        const m = fn(sl, cfg);
+        if (!first) first = { ...m, trail: sl };
+        if (m.pass) return { ...m, trail: sl };
+      }
+      return first;
+    };
     const report = {
-      circle: measureCircle(win, cfg),
-      rise: measureRise(win, cfg),
-      sweep: measureSweep(win, cfg),
-      zigzag: measureZigzag(win, cfg),
+      circle: pick(measureCircle),
+      rise: pick(measureRise),
+      sweep: pick(measureSweep),
+      zigzag: pick(measureZigzag),
       still: measureStill(now),
       grab: { heldMs: grabHeldMs, pass: grabPass },
       cooling: false,
@@ -167,6 +179,7 @@ export function createRecognizer(cfg = CONFIG.gestures) {
         fire(name, now);
         report.lastFired = name;
         report.lastFiredAt = now;
+        report.firedTrail = report[name].trail || win; // el trozo que cumplió el gesto
         return { fired: name, report };
       }
     }

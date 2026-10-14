@@ -84,6 +84,9 @@ export const CONFIG = {
   gestures: {
     // Ventana de trayectoria analizada (ms).
     windowMs: 1000,
+    // Fracciones de la ventana en que también se busca un gesto (más recientes). Así un
+    // gesto se reconoce en cuanto existe, aunque venga precedido de otro recorrido.
+    windowFractions: [1, 0.7, 0.45],
     // Tras reconocer un gesto, pausa (ms) sin reconocer otro. Evita que un mismo
     // movimiento dispare dos hechizos o repita el mismo.
     cooldownMs: 700,
@@ -120,6 +123,9 @@ export const CONFIG = {
     // Distancia (px) entre el punto de atención y la caja de la letra para "sensible".
     // Más = la letra se delata de más lejos.
     sensitiveRadius: 140,
+    // Para repartir un gesto solo se mira el final del trazo (ms): el recorrido de
+    // aproximación a la letra no cuenta. Más = se tolera un gesto más largo/lento.
+    gestureTargetMs: 500,
     // Cuánto dura el estado "escuchando" (letra entreabierta) antes de apagarse (ms).
     listeningMs: 600,
     // Gesto que despierta a cada letra (nombres de gestures.js).
@@ -162,6 +168,13 @@ export const CONFIG = {
     portalRemnantScale: 0.22, // D: tamaño de la copia que queda girando en la panza
     portalRemnantSpinDeg: 40, // D: velocidad de giro de esa copia (grados/s)
     riseSpeed: 90,            // I: velocidad de ascenso del polvo (px/s)
+    riseStretch: 1.6,         // I: cuánto se estira el asta (1.6 = 60 % más alta)
+    riseDustPerPoint: 4,      // I: partículas por punto muestreado del contorno (densidad)
+    riseFallSpeed: 40,        // I: velocidad (px/s) de la caída "normal" antes de invertirse
+    riseReverseMs: 500,       // I: cuánto tarda la gravedad en invertirse (ms). Más = giro más lento
+    riseSpread: 0.35,         // I: fracción de la duración en que se sueltan (de abajo hacia arriba)
+    riseHeight: 420,          // I: altura (px) a la que el polvo termina de apagarse
+    riseGlobalLift: 60,       // I: ascenso (px/s) que el hechizo da al polvo ambiental de toda la pantalla
     ribbonLength: 160,        // S: largo de la cinta (muestras)
     constellation: {          // Y: constelación-árbol
       branches: 2,            // ramas por bifurcación

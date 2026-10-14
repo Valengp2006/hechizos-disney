@@ -53,7 +53,7 @@ const recognizer = createRecognizer();
 // Aquí se conectarán las letras (Hito 6): cada gesto reconocido llega con su nombre.
 function onGesture(name, trail) {
   const r = letters?.handleGesture(name, trail, input);
-  if (dev) console.log('[gesto]', name, r ? `-> ${r.letter}: ${r.result}` : '-> ninguna letra');
+  if (dev) console.log('[gesto]', name, r ? `-> ${r.letter}: ${r.result} (fin ${Math.round(r.x)},${Math.round(r.y)}; ${r.n} pts; dist ${r.dists})` : '-> ninguna letra');
 }
 
 function resize() {
@@ -80,11 +80,12 @@ renderer.setAnimationLoop(() => {
   tickPanel();
   const dt = Math.min(clock.getDelta(), 0.1); // tope: una pestaña dormida no hace saltar nada
   updateInput(dt);
+  dust.setLift(letters?.lift() ?? 0);
   dust.update(dt, clock.elapsedTime, input);
   light.update(input);
   const now = performance.now();
   const { fired, report } = recognizer.push(input, now);
-  if (fired) onGesture(fired, report.trail);
+  if (fired) onGesture(fired, report.firedTrail);
   letters?.update(dt * 1000, clock.elapsedTime, input);
   if (dev && debugOn) gestureDebug.update(report, now, letters?.states());
   renderer.render(scene, camera);

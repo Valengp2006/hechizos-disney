@@ -49,6 +49,10 @@ export function createDust() {
     }),
   );
 
+  // Empuje hacia arriba (0..1) que un hechizo da a todo el polvo (gravedad invertida).
+  let lift = 0;
+  const setLift = (v) => { lift = v; };
+
   function resize(width, height) { w = width; h = height; }
 
   function update(dt, time, input) {
@@ -57,7 +61,7 @@ export function createDust() {
     for (let i = 0; i < n; i++) {
       // Deriva y envoltura en los bordes (en coordenadas normalizadas).
       nx[i] = (nx[i] + (vel[i * 2] * dustDrift * dt) / w + 1) % 1;
-      ny[i] = (ny[i] + (vel[i * 2 + 1] * dustDrift * dt) / h + 1) % 1;
+      ny[i] = (ny[i] + (vel[i * 2 + 1] * dustDrift * dt) / h - (lift * CONFIG.spells.riseGlobalLift * dt) / h + 1) % 1;
       const x = nx[i] * w, y = ny[i] * h;
       pos[i * 3] = x; pos[i * 3 + 1] = y;
 
@@ -74,5 +78,5 @@ export function createDust() {
     geo.attributes.color.needsUpdate = true;
   }
 
-  return { object: points, update, resize };
+  return { object: points, update, resize, setLift };
 }
