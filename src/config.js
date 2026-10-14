@@ -61,7 +61,7 @@ export const CONFIG = {
     // Semilla del polvo: fija dónde nace cada partícula (misma semilla = mismo polvo).
     dustSeed: 7,
     // Tamaño (px) y brillo base 0..1 del polvo. Casi invisible a propósito.
-    dustSize: 10,
+    dustSize: 8,
     dustOpacity: 0.09,
     // Velocidad de deriva del polvo (px/s). 0 = quieto.
     dustDrift: 6,
@@ -133,7 +133,7 @@ export const CONFIG = {
     // Dónde nace cada letra: centro (fracción del ancho/alto de pantalla) y tamaño de
     // la letra (fracción del alto de pantalla). Distintos a propósito: no están en línea.
     layout: {
-      D: { x: 0.16, y: 0.30, size: 0.34 },
+      D: { x: 0.20, y: 0.30, size: 0.34 },
       I: { x: 0.40, y: 0.74, size: 0.24 },
       S: { x: 0.60, y: 0.26, size: 0.28 },
       N: { x: 0.84, y: 0.62, size: 0.38 },
@@ -160,21 +160,23 @@ export const CONFIG = {
   // ---------- Hechizos ----------
   spells: {
     durationMs: { D: 4000, I: 4000, S: 5000, N: 3000, E: 5000, Y: 6000 },
-    portalCopies: 12,         // D: copias del contorno hacia el fondo
-    portalScaleStep: 0.78,    // D: escala de cada copia respecto a la anterior (más alto = túnel más largo)
-    portalTwistDeg: 14,       // D: giro (grados) entre copias consecutivas
-    portalFlow: 3,            // D: copias por segundo que "caen" por el túnel
-    portalCenter: { x: 0.55, y: 0.5 }, // D: punto de fuga dentro de la letra (fracción de su caja)
-    portalRemnantScale: 0.22, // D: tamaño de la copia que queda girando en la panza
-    portalRemnantSpinDeg: 40, // D: velocidad de giro de esa copia (grados/s)
-    riseSpeed: 90,            // I: velocidad de ascenso del polvo (px/s)
-    riseStretch: 1.6,         // I: cuánto se estira el asta (1.6 = 60 % más alta)
-    riseDustPerPoint: 4,      // I: partículas por punto muestreado del contorno (densidad)
-    riseFallSpeed: 40,        // I: velocidad (px/s) de la caída "normal" antes de invertirse
-    riseReverseMs: 500,       // I: cuánto tarda la gravedad en invertirse (ms). Más = giro más lento
-    riseSpread: 0.35,         // I: fracción de la duración en que se sueltan (de abajo hacia arriba)
-    riseHeight: 420,          // I: altura (px) a la que el polvo termina de apagarse
-    riseGlobalLift: 60,       // I: ascenso (px/s) que el hechizo da al polvo ambiental de toda la pantalla
+    // --- D: campanada de luz ---
+    bellRings: 5,             // D: ondas de contorno que se expanden (más = más celebración)
+    bellMaxScale: 1.8,        // D: tamaño final de la onda respecto a la letra
+    bellStagger: 0.14,        // D: separación entre ondas (fracción de la duración)
+    bellRingLife: 0.4,        // D: cuánto vive cada onda (fracción de la duración)
+    fireflyCount: 30,         // D: luciérnagas que salen de la panza
+    fireflyTurns: 1.2,        // D: vueltas de la espiral con que se reparten
+    fireflyTwinkleHz: 1.1,    // D: parpadeo de las luciérnagas (veces por segundo)
+    // --- I: rebote ligero ---
+    riseSquash: 0.88,         // I: cuánto se encoge al tomar impulso (1 = nada)
+    riseStretch: 1.5,         // I: estirón máximo del salto (1.5 = 50 % más alta)
+    riseBalloons: 28,         // I: globos de luz que suben
+    riseSpeed: 110,           // I: velocidad de ascenso de los globos (px/s)
+    riseSwayPx: 16,           // I: balanceo lateral de los globos (px)
+    riseSpread: 0.4,          // I: fracción de la duración en que se sueltan
+    riseHeight: 360,          // I: altura (px) a la que los globos estallan en chispas
+    riseGlobalLift: 35,       // I: ascenso suave (px/s) del polvo de toda la pantalla
     ribbonLength: 160,        // S: largo de la cinta (muestras)
     constellation: {          // Y: constelación-árbol
       branches: 2,            // ramas por bifurcación

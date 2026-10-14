@@ -14,11 +14,11 @@ import { CONFIG } from './config.js';
 import { letterShape } from './font.js';
 import { haloTexture, rgb } from './render.js';
 import { rng } from './dust.js';
-import { createPortal } from './spells/d.js';
-import { createGravity } from './spells/i.js';
+import { createBell } from './spells/d.js';
+import { createBounce } from './spells/i.js';
 
 // Hechizos por letra. Las letras sin entrada usan el destello placeholder.
-const SPELLS = { D: createPortal, I: createGravity };
+const SPELLS = { D: createBell, I: createBounce };
 
 export const STATE = {
   LATENT: 'latent', SENSITIVE: 'sensitive', LISTENING: 'listening',
@@ -114,7 +114,7 @@ class Letter {
     // Hechizo propio de la letra (si existe). Se crea una vez; solo se anima.
     this.spell = SPELLS[char] ? SPELLS[char](this) : null;
     if (this.spell?.anchor) {
-      // El destello nace donde el hechizo lo pide (p. ej. el punto de fuga del portal).
+      // El destello nace donde el hechizo lo pide (p. ej. el centro de la letra).
       this.flashGeo.attributes.position.setXYZ(0, this.spell.anchor.x, this.spell.anchor.y, 0);
     }
   }
