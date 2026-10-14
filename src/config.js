@@ -177,11 +177,31 @@ export const CONFIG = {
     riseSpread: 0.4,          // I: fracción de la duración en que se sueltan
     riseHeight: 360,          // I: altura (px) a la que los globos estallan en chispas
     riseGlobalLift: 35,       // I: ascenso suave (px/s) del polvo de toda la pantalla
-    ribbonLength: 160,        // S: largo de la cinta (muestras)
-    constellation: {          // Y: constelación-árbol
-      branches: 2,            // ramas por bifurcación
-      depth: 4,               // niveles de recursión
-    },
+    // --- N: cascada de chispas ---
+    sparkBounces: 5,          // N: rebotes de la chispa entre las dos astas
+    sparkFlight: 0.14,        // N: duración de cada salto (fracción de la duración total)
+    sparkArc: 0.2,            // N: altura del arco de cada salto (fracción del alto de la letra)
+    sparkStars: 8,            // N: estrellitas que salen en cada rebote
+    sparkPulse: 0.06,         // N: cuánto tarda en apagarse el asta que se ilumina (fracción)
+    // --- S: cinta de fiesta ---
+    ribbonDistance: 0.42,     // S: alcance horizontal de la cinta (fracción del ancho de pantalla)
+    ribbonWave: 0.09,         // S: amplitud del ondulado (fracción del alto de pantalla)
+    ribbonLoop: 0.07,         // S: radio del rizo final (fracción del alto de pantalla)
+    ribbonSpread: 0.28,       // S: cuánto se estira la cinta (fracción de la duración)
+    ribbonConfetti: 2,        // S: ecos de luz que deja cada punto (0 = sin confeti)
+    // --- E: amanecer ---
+    dawnRayLength: 0.32,      // E: alcance de los rayos (fracción del ancho de pantalla)
+    dawnRays: 5,              // E: rayos por brazo (en abanico)
+    dawnFanDeg: 38,           // E: apertura del abanico de cada brazo (grados a cada lado)
+    dawnLift: 45,             // E: ascenso suave (px/s) del polvo que toca la luz
+    dawnWarmth: 0.85,         // E: cuánto se vuelve dorado el polvo de la pantalla (0..1)
+    // --- Y: floración ---
+    chargeMs: 1500,           // Y: tiempo de agarre para la floración máxima
+    bloomDepthMin: 2,         // Y: niveles de ramas con un agarre mínimo
+    bloomDepthMax: 4,         // Y: niveles de ramas con el agarre máximo
+    bloomAngleDeg: 28,        // Y: apertura de cada bifurcación (grados a cada lado)
+    bloomRatio: 0.68,         // Y: largo de cada rama respecto a la anterior
+    bloomPetals: 6,           // Y: pétalos por flor
   },
 
   // ---------- Final ----------

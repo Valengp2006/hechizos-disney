@@ -16,9 +16,13 @@ import { haloTexture, rgb } from './render.js';
 import { rng } from './dust.js';
 import { createBell } from './spells/d.js';
 import { createBounce } from './spells/i.js';
+import { createRibbon } from './spells/s.js';
+import { createSparks } from './spells/n.js';
+import { createDawn } from './spells/e.js';
+import { createBloom } from './spells/y.js';
 
 // Hechizos por letra. Las letras sin entrada usan el destello placeholder.
-const SPELLS = { D: createBell, I: createBounce };
+const SPELLS = { D: createBell, I: createBounce, S: createRibbon, N: createSparks, E: createDawn, Y: createBloom };
 
 export const STATE = {
   LATENT: 'latent', SENSITIVE: 'sensitive', LISTENING: 'listening',
@@ -47,6 +51,8 @@ class Letter {
     this.body = new THREE.Group();
     this.group.add(this.body);
     this.lift = 0; // cuánto empuja el hechizo al polvo ambiental (0..1)
+    this.warmth = 0; // cuánto dora el hechizo al polvo ambiental (0..1)
+    this.chargeLevel = 0; // 0..1: cuánto lleva agarrada la letra (solo Y lo usa)
 
     // Contorno (línea fina) y puntos muestreados: la letra "ya construida".
     this.lineMat = new THREE.LineBasicMaterial({
@@ -148,7 +154,8 @@ class Letter {
 
   // --- transiciones (nombres del modelo) ---
   listen() { this.set(STATE.LISTENING); }
-  conjure() { this.set(STATE.CONJURED); }
+  // `trail` es el trazo del gesto (px de pantalla): algunos hechizos lo usan (p. ej. la cinta).
+  conjure(trail, info) { this.set(STATE.CONJURED); this.spell?.start?.(trail, info); }
   awaken() { this.set(STATE.AWAKE); }
   reset() { this.set(STATE.LATENT); this.spell?.reset(); }
 
@@ -165,6 +172,7 @@ class Letter {
     let color = this.cRose;
     let stretch = 1;
     this.lift = 0;
+    this.warmth = 0;
 
     switch (this.state) {
       case STATE.SENSITIVE:
@@ -193,6 +201,7 @@ class Letter {
           flashOp = o.flashOp;
           stretch = o.stretch ?? 1;
           this.lift = o.lift ?? 0;
+          this.warmth = o.warmth ?? 0;
           this.flashMat.size = this.flashBase * o.flashScale;
           if (k >= 1) this.awaken();
           break;
@@ -220,6 +229,10 @@ class Letter {
     }
 
     this.setStretch(stretch);
+    // Carga (agarre sostenido): el hechizo muestra que se está preparando.
+    if (this.spell?.charge && this.state !== STATE.CONJURED && this.state !== STATE.AWAKE) {
+      this.spell.charge(this.chargeLevel, timeS);
+    }
     this.lineMat.color.copy(color);
     this.pointMat.color.copy(color);
     this.lineMat.opacity = lineOp;
@@ -270,13 +283,20 @@ export function createLetters(font) {
   let target = null;
   function update(dtMs, timeS, input) {
     target = input.active ? nearest(input.x, input.y) : null;
-    for (const l of letters) l.update(dtMs, timeS, l === target);
+    // Agarrar sobre una letra que se conjura agarrando (Y): se "carga" mientras se mantiene.
+    for (const l of letters) {
+      const holding = input.grab && l === target && l.gesture === 'grab';
+      l.chargeLevel = holding
+        ? Math.min(1, l.chargeLevel + dtMs / CONFIG.spells.chargeMs)
+        : Math.max(0, l.chargeLevel - dtMs / 200);
+      l.update(dtMs, timeS, l === target);
+    }
   }
 
   // Un gesto reconocido llega con su trazo. Lo recibe la letra (latente/sensible) que el
   // final del trazo (gestureTargetMs) toca más de cerca: menor distancia entre un punto
   // del trazo y su caja. Ni el centro ni el inicio sirven: se contaminan con la aproximación.
-  function handleGesture(name, trail, input) {
+  function handleGesture(name, trail, input, info) {
     let pts = [{ x: input.x, y: input.y }];
     if (trail && trail.length) {
       const tEnd = trail[trail.length - 1].t;
@@ -294,19 +314,20 @@ export function createLetters(font) {
       if (d <= bestD) { l = c; bestD = d; }
     }
     const x = pts[pts.length - 1].x, y = pts[pts.length - 1].y;
-    const info = { x, y, n: pts.length, dists: dists.join(' ') };
+    const dbg = { x, y, n: pts.length, dists: dists.join(' ') };
     if (!l) return null;
-    if (l.gesture === name) { l.conjure(); return { letter: l.char, result: 'conjure', ...info }; }
+    if (l.gesture === name) { l.conjure(trail, info); return { letter: l.char, result: 'conjure', ...dbg }; }
     l.listen();
-    return { letter: l.char, result: 'listen', ...info };
+    return { letter: l.char, result: 'listen', ...dbg };
   }
 
   const allAwake = () => letters.every((l) => l.state === STATE.AWAKE);
   const reset = () => letters.forEach((l) => l.reset());
   // Empuje del hechizo sobre el polvo ambiental: el mayor de las letras en curso.
   const lift = () => Math.max(0, ...letters.map((l) => l.lift));
+  const warmth = () => Math.max(0, ...letters.map((l) => l.warmth));
   const setDebug = (v) => letters.forEach((l) => { l.debug.visible = v; });
   const states = () => letters.map((l) => `${l.char}:${l.state}`).join('  ');
 
-  return { object: group, layout, update, handleGesture, allAwake, reset, lift, setDebug, states, letters };
+  return { object: group, layout, update, handleGesture, allAwake, reset, lift, warmth, setDebug, states, letters };
 }

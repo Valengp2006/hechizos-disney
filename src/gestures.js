@@ -128,8 +128,8 @@ export function createRecognizer(cfg = CONFIG.gestures) {
     // no lo ignoramos al soltar, pero sí respeta el cooldown para no pisar otro gesto.
     let grabHeldMs = 0;
     if (input.grab && !prevGrab) grabStart = now;
-    if (input.grab) grabHeldMs = now - grabStart;
     const released = !input.grab && prevGrab;
+    if (input.grab || released) grabHeldMs = now - grabStart; // al soltar, cuánto se mantuvo
     const grabPass = released && now - grabStart >= cfg.grab.minHoldMs;
     prevGrab = input.grab;
 

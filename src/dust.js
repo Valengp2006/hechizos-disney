@@ -52,6 +52,11 @@ export function createDust() {
   // Empuje hacia arriba (0..1) que un hechizo da a todo el polvo (gravedad invertida).
   let lift = 0;
   const setLift = (v) => { lift = v; };
+  // Calidez (0..1): el polvo se vuelve dorado y más brillante (hechizo E).
+  let warmth = 0;
+  const setWarmth = (v) => { warmth = v; };
+  const gold = rgb(CONFIG.visual.colors.awake);
+  const tint = new THREE.Color();
 
   function resize(width, height) { w = width; h = height; }
 
@@ -72,11 +77,13 @@ export function createDust() {
         const d2 = dx * dx + dy * dy;
         if (d2 < r2) b += dustReactGain * (1 - Math.sqrt(d2) / dustReactRadius) ** 2;
       }
-      col[i * 3] = base.r * b; col[i * 3 + 1] = base.g * b; col[i * 3 + 2] = base.b * b;
+      tint.copy(base).lerp(gold, warmth);
+      b *= 1 + warmth * 2;
+      col[i * 3] = tint.r * b; col[i * 3 + 1] = tint.g * b; col[i * 3 + 2] = tint.b * b;
     }
     geo.attributes.position.needsUpdate = true;
     geo.attributes.color.needsUpdate = true;
   }
 
-  return { object: points, update, resize, setLift };
+  return { object: points, update, resize, setLift, setWarmth };
 }
