@@ -20,7 +20,7 @@ export function rng(seed) {
 export function createDust() {
   const n = CONFIG.visual.dustCount;
   const rand = rng(CONFIG.visual.dustSeed);
-  const base = rgb(CONFIG.visual.colors.ice);
+  const base = rgb(CONFIG.visual.colors.amber);
   const pos = new Float32Array(n * 3);
   const col = new Float32Array(n * 3);
   const vel = new Float32Array(n * 2); // deriva propia de cada partícula

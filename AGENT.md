@@ -7,12 +7,13 @@ Este archivo es el contexto de trabajo para el agente. Léelo completo antes de 
 Unidad 7 del curso (12.5% de la nota): un **sistema tipográfico jugable** hecho con tecnologías web, que usa las letras del nombre de una organización para explorar un atributo de su identidad.
 
 - **Organización:** Disney (entretenimiento y narración, público familiar e intergeneracional).
-- **Atributo:** **hacer posible lo imposible** (la animación como el lugar donde lo que no puede existir existe).
+- **Misión que sostiene el proyecto:** **hacer feliz a la gente**. La fuente oficial (Compromiso Disney) la formula como fomentar la felicidad y el bienestar de niños y familias.
+- **Atributo:** **magia y fantasía**, al servicio de esa misión: la magia no es el espectáculo sino la forma de regalar alegría.
 - **Contexto de uso:** pantalla interactiva en un evento o exhibición.
 - **Entradas:** **mano con cámara y mouse, conviviendo** (misma interfaz de entrada para ambos).
-- **Verbo central del juego:** *conjurar*.
-- **Idea en una frase:** pantalla casi negra y un único punto de luz que sigue la mano o el cursor. Las letras de DISNEY no se ven. Cada letra guarda un **hechizo escondido** que se activa con un tipo de gesto y transforma la letra de una forma imposible usando solo sus propios trazos. Cuando las seis han despertado, convergen, hay un silencio, la palabra se lee entera y las astas crecen hasta formar un castillo.
-- **Efecto buscado en quien juega:** **asombro y sorpresa**. Que sea inesperado y que no se sienta como algo de la vida cotidiana.
+- **Verbo central del juego:** *encantar* (hechizar y también deleitar).
+- **Idea en una frase:** pantalla casi negra y un único punto de luz que sigue la mano o el cursor. Las letras de DISNEY no se ven. Cada letra guarda un **hechizo escondido** que se activa con un tipo de gesto y **encanta** la letra: la transforma de una forma deliciosa usando solo sus propios trazos. Cuando las seis han despertado, convergen, hay un silencio, la palabra se lee entera y las astas crecen hasta formar un castillo.
+- **Efecto buscado en quien juega:** **alegría y calidez**. Que sonría, que se sienta bienvenido y que quiera compartirlo con quien tiene al lado (público familiar e intergeneracional). El asombro sigue siendo el medio, no el fin.
 
 ## 2. Restricciones del encargo (no negociables)
 
@@ -27,15 +28,16 @@ Unidad 7 del curso (12.5% de la nota): un **sistema tipográfico jugable** hecho
 ### Propiedad intelectual
 - **No reproducir el logo de Disney, su caligrafía ni la silueta de su castillo.** Usamos una tipografía real y libre, y el castillo es uno genérico de cuento que **se construye con las formas de las letras** (astas como torres, terminales como agujas y banderines).
 - Del moodboard se toma solo el **lenguaje visual** (luz, puntos, línea fina, paleta), nunca siluetas de personajes ni composiciones concretas.
+- **Castillo genérico.** Debe leerse como "castillo de cuento" y no como el de Disney: sin torre central alta y simétrica con aguja, sin techos cónicos en abanico, **sin estela de polvo en arco** sobre él (es parte del logo) y sin círculos de Mickey. Se construye con las astas y terminales de las letras de DISNEY, con torres de alturas distintas, composición asimétrica, banderines y agujas que nacen de los remates, y polvo de luz disperso (no en arco).
 
 ## 3. Dirección visual
 
-- Pantalla casi negra (negro / azul noche / violeta profundo). La oscuridad es parte del asombro: lo que existe es lo que la luz toca.
+- Pantalla casi negra (negro / azul noche). La oscuridad es el lienzo: lo que existe es lo que la luz toca, y la luz es cálida.
 - Todo es luz: puntos brillantes y contorno de línea fina sin relleno. Volumen por densidad de puntos, forma por la línea.
 - Trazos largos y curvos al moverse; que fluya, no que vaya en línea recta.
-- Paleta: lila y azul hielo durante la magia, **dorado** cuando una letra queda despierta.
+- Paleta cálida: **rosa suave** y **ámbar** durante la magia, **dorado** cuando una letra queda despierta, sobre azul noche.
 - Brillo con `THREE.AdditiveBlending` (y, si hace falta, bloom con `UnrealBloomPass`).
-- Lo que produce asombro, a tener presente al diseñar cada momento: física imposible (luz que cae hacia arriba, letras que se vuelven líquidas), cambio de escala (entrar en una letra y encontrar un túnel), consecuencia desproporcionada (un gesto pequeño, una transformación enorme) y **silencio antes de la revelación**.
+- Lo que produce alegría, a tener presente al diseñar cada momento: movimiento ligero y juguetón (nada brusco ni amenazante), calidez de color, respuestas generosas (un gesto pequeño, una celebración grande), ritmo que respira y un **breve silencio antes de la revelación**.
 
 ## 4. Modelo del sistema
 
@@ -71,7 +73,7 @@ Tener un **panel de depuración** (solo desarrollo, tecla `D`) que muestre la tr
 | Latente | invisible; solo polvo tenue en su zona |
 | Sensible | el punto de atención está cerca: el polvo de esa letra se **estremece** ("aquí hay algo") |
 | Escuchando | gesto parcial o equivocado: la letra se **entreabre** un instante y se apaga |
-| Conjurada | gesto correcto: el hechizo se ejecuta |
+| Encantada (`conjured` en el código) | gesto correcto: el hechizo se ejecuta |
 | Despierta | terminado el hechizo, queda encendida en dorado, respirando |
 
 ### Las letras
@@ -175,7 +177,7 @@ Valen quiere **prototipar las seis letras**. Primero toda la tubería (entrada, 
 - **Tipografía final** (los hechizos se ajustan a sus formas).
 - **Destellos de cuatro puntas:** el encargo pide que los elementos gráficos salgan de las letras. Opciones: (a) formarlos con trazos de la propia letra, (b) dibujarlos como elemento externo y registrarlo en la bitácora como decisión consciente.
 - Tamaño y relación de aspecto de la pantalla del evento.
-- Sonido (por ahora no; un proyecto de asombro podría beneficiarse, pero es otra entrada y otro alcance).
+- Sonido: hay un loop de fondo (archivo que pone Valen; ver `public/audio/`). Debería sonar cálido y alegre, no solemne.
 
 ## 10. Cómo trabajar con Valen
 
@@ -195,7 +197,9 @@ Valen debe registrar en su bitácora de GitHub referentes, bocetos, experimentos
 - Al cerrar cada hito, propón una entrada corta en `docs/bitacora/` con fecha, qué se hizo, qué se decidió y por qué, y qué se observó.
 - Para cada cambio de parámetro o de regla: **hipótesis antes, observación después**.
 - Registra las pruebas con otras personas: qué intentaron, qué descubrieron, qué gestos probaron antes de dar con el correcto, cómo interpretaron las respuestas.
-- Registra el cambio de concepto: se partió de "dar vida a lo inanimado / cuidar" y se pasó a "hacer posible lo imposible / conjurar" porque la primera mecánica se sentía de gestión y no mágica, y lo buscado era asombro. Es una decisión de diseño que vale la pena dejar escrita con su razón.
+- Registra los cambios de concepto, cada uno con su razón:
+  1. "Dar vida a lo inanimado / cuidar" -> "hacer posible lo imposible / conjurar": la primera mecánica se sentía de gestión y no mágica; se buscaba asombro.
+  2. "Hacer posible lo imposible / conjurar" -> **"hacer feliz a la gente: magia y fantasía / encantar"**: lo imposible producía espectáculo y no calidez; la misión de la marca es de afecto, y el efecto buscado pasó de asombro a alegría. Se mantiene la tubería y los gestos; cambian el tono, la paleta y el sentido de los hechizos.
 
 ### Autoevaluación (lista antes de presentar)
 Cada criterio de 0 a 25 puntos, con evidencias:
@@ -204,8 +208,11 @@ Cada criterio de 0 a 25 puntos, con evidencias:
 3. **Interacción e identidad:** qué permiten descubrir las acciones sobre el atributo elegido, contrastado con las pruebas con otras personas.
 4. **Resolución tipográfica y experiencia de juego:** composición, ritmo, momentos de lectura y respuestas perceptibles.
 
-### Base para justificar el atributo
-"Hacer posible lo imposible" se apoya en la historia de la animación de Disney: el lugar donde lo que no puede existir existe. Valen debe **buscar y citar una fuente verificada** (por ejemplo, textos sobre los principios de animación de Frank Thomas y Ollie Johnston en *The Illusion of Life*, o fuentes sobre la idea de lo "plausiblemente imposible" en la animación de Disney), confirmando la cita antes de usarla. Que el asombro surja de **conjurar** con un gesto es una decisión de diseño de Valen construida sobre esa base.
+### Base para justificar la misión y el atributo
+- **Misión (fuente primaria):** Compromiso Disney, sección Institucional (compromiso.disneylatino.com/institucional): operar el negocio de forma ética y fomentar la felicidad y el bienestar de niños y familias. Sin fecha visible (pie "© 2026"). Verificada.
+- **Magia y fantasía (fuente secundaria):** Oropeza, C. (21/04/2023). *La magia detrás del branding de Disney*. We Build It. Presenta la misión como "hacer a la gente feliz en todo el mundo" y al castillo como la magia, la fantasía y el sueño de un lugar donde todos pueden ser felices. Es un blog de marca: sirve para ubicar la idea, no como respaldo académico. Verificada.
+- **Pendiente de verificar:** figura de ResearchGate sobre el esquema de atributos de la marca Disney (fig1_395179938). La página devolvió 403 desde la herramienta; Valen debe abrirla y anotar título, autores y año antes de citarla.
+- Que la alegría surja de **encantar** con un gesto es una decisión de diseño de Valen construida sobre esa base. Ver `docs/referentes.md`.
 
 ## 12. Presentación
 

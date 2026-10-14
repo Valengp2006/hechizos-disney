@@ -57,8 +57,8 @@ export function createGravity(letter) {
   const tmp = new THREE.Color();
 
   function write(i, brightness, mix, gold) {
-    // mix: 0 lila -> 1 azul hielo; gold: 0..1 hacia dorado (hilo de la letra despierta)
-    tmp.copy(letter.cMagic).lerp(letter.cIce, mix).lerp(letter.cAwake, gold);
+    // mix: 0 rosa -> 1 ámbar; gold: 0..1 hacia dorado (hilo de la letra despierta)
+    tmp.copy(letter.cRose).lerp(letter.cAmber, mix).lerp(letter.cAwake, gold);
     colors[i * 3] = tmp.r * brightness;
     colors[i * 3 + 1] = tmp.g * brightness;
     colors[i * 3 + 2] = tmp.b * brightness;
@@ -100,7 +100,7 @@ export function createGravity(letter) {
     return {
       lineOp: smooth(0, 0.15, k),
       pointOp: 0.8 * smooth(0, 0.15, k),
-      color: tmp.clone().copy(letter.cMagic).lerp(letter.cAwake, smooth(0.55, 1, k)),
+      color: tmp.clone().copy(letter.cRose).lerp(letter.cAwake, smooth(0.55, 1, k)),
       flashOp: 0.18 * bump,
       flashScale: 0.6 + 0.6 * bump,
       stretch: 1 + (cfg.riseStretch - 1) * grow,

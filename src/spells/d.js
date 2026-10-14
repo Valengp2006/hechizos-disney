@@ -42,11 +42,11 @@ export function createPortal(letter) {
   // Una copia = grupo + material propio (cada una tiene su color y brillo).
   function makeCopy() {
     const lineMat = new THREE.LineBasicMaterial({
-      color: letter.cMagic, transparent: true, opacity: 0, depthWrite: false,
+      color: letter.cRose, transparent: true, opacity: 0, depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
     const pointMat = new THREE.PointsMaterial({
-      map: haloTexture(), color: letter.cMagic, transparent: true, opacity: 0, depthWrite: false,
+      map: haloTexture(), color: letter.cRose, transparent: true, opacity: 0, depthWrite: false,
       blending: THREE.AdditiveBlending, size: 5, sizeAttenuation: false,
     });
     const g = new THREE.Group();
@@ -96,8 +96,8 @@ export function createPortal(letter) {
       // Aparece suavemente al nacer y se apaga al llegar al fondo.
       const edge = Math.sin(Math.PI * clamp01(depth)) ** 0.7;
       const opacity = 0.7 * edge * visible * (1 - close);
-      // Color: lila al frente, azul hielo al fondo, dorado en el último anillo.
-      const base = mix(letter.cMagic, letter.cIce, depth).clone();
+      // Color: rosa al frente, ámbar al fondo, dorado en el último anillo.
+      const base = mix(letter.cRose, letter.cAmber, depth).clone();
       const gold = smooth(0.6, 1, depth) * smooth(0.3, 0.8, k);
       place(copies[i], f, opacity, base.lerp(letter.cAwake, gold));
       copies[i].g.rotation.z = twistNow * (f + 1);
@@ -119,7 +119,7 @@ export function createPortal(letter) {
     return {
       lineOp: smooth(0, 0.2, k),
       pointOp: 0.8 * smooth(0, 0.2, k),
-      color: mix(letter.cMagic, letter.cAwake, smooth(0.5, 1, k)).clone(),
+      color: mix(letter.cRose, letter.cAwake, smooth(0.5, 1, k)).clone(),
       flashOp: 0.45 * bump,
       flashScale: 0.6 + 0.8 * bump,
     };

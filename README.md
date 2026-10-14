@@ -1,6 +1,6 @@
 # Hechizos
 
-Sistema tipográfico jugable con las letras de **DISNEY**. Atributo explorado: *hacer posible lo imposible*. Verbo: *conjurar*. Entradas: mouse y mano con cámara.
+Sistema tipográfico jugable con las letras de **DISNEY**. Misión: *hacer feliz a la gente*. Atributo explorado: *magia y fantasía*. Verbo: *encantar*. Entradas: mouse y mano con cámara.
 
 Contexto completo y reglas del proyecto: [AGENT.md](AGENT.md).
 

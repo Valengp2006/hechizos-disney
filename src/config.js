@@ -48,8 +48,8 @@ export const CONFIG = {
     dustCount: 400,
     // Colores por estado de la letra (RGB).
     colors: {
-      magic: [190, 170, 255],   // lila durante la magia
-      ice: [170, 210, 255],     // azul hielo
+      rose: [255, 170, 190],    // rosa suave: el primer destello de la magia
+      amber: [255, 214, 150],   // ámbar: calidez, luz de luciérnaga
       awake: [255, 205, 110],   // dorado: letra despierta
     },
     // Escala del halo de cada luz. Más = halo más grande y suave.

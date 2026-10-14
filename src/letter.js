@@ -38,8 +38,8 @@ class Letter {
     this.pos = { x: 0, y: 0 }; // esquina superior izquierda en pantalla (px)
 
     const colors = CONFIG.visual.colors;
-    this.cMagic = rgb(colors.magic);
-    this.cIce = rgb(colors.ice);
+    this.cRose = rgb(colors.rose);
+    this.cAmber = rgb(colors.amber);
     this.cAwake = rgb(colors.awake);
 
     this.group = new THREE.Group();
@@ -50,7 +50,7 @@ class Letter {
 
     // Contorno (línea fina) y puntos muestreados: la letra "ya construida".
     this.lineMat = new THREE.LineBasicMaterial({
-      color: this.cMagic, transparent: true, opacity: 0, depthWrite: false,
+      color: this.cRose, transparent: true, opacity: 0, depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
     for (const c of this.shape.contours) {
@@ -59,7 +59,7 @@ class Letter {
       this.body.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), this.lineMat));
     }
     this.pointMat = new THREE.PointsMaterial({
-      map: haloTexture(), color: this.cMagic, transparent: true, opacity: 0, depthWrite: false,
+      map: haloTexture(), color: this.cRose, transparent: true, opacity: 0, depthWrite: false,
       blending: THREE.AdditiveBlending, size: 7, sizeAttenuation: false,
     });
     this.body.add(new THREE.Points(
@@ -81,7 +81,7 @@ class Letter {
     this.dustGeo = new THREE.BufferGeometry();
     this.dustGeo.setAttribute('position', new THREE.BufferAttribute(this.dustPos, 3));
     this.dustMat = new THREE.PointsMaterial({
-      map: haloTexture(), color: this.cIce, transparent: true, opacity: 0, depthWrite: false,
+      map: haloTexture(), color: this.cAmber, transparent: true, opacity: 0, depthWrite: false,
       blending: THREE.AdditiveBlending, size: 9, sizeAttenuation: false,
     });
     const dust = new THREE.Points(this.dustGeo, this.dustMat);
@@ -100,7 +100,7 @@ class Letter {
 
     // Contorno tenue de depuración (solo dev): dónde está la letra aunque esté latente.
     this.debugMat = new THREE.LineBasicMaterial({
-      color: this.cIce, transparent: true, opacity: 0.22, depthWrite: false,
+      color: this.cAmber, transparent: true, opacity: 0.22, depthWrite: false,
     });
     this.debug = new THREE.Group();
     for (const c of this.shape.contours) {
@@ -162,7 +162,7 @@ class Letter {
     }
 
     let lineOp = 0, pointOp = 0, dustOp = L.latentDustOpacity, tremble = 0, flashOp = 0;
-    let color = this.cMagic;
+    let color = this.cRose;
     let stretch = 1;
     this.lift = 0;
 

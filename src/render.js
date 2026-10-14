@@ -28,7 +28,7 @@ export function haloTexture() {
 export function createLightPoint() {
   const n = CONFIG.visual.trailLength;
   const history = Array.from({ length: n }, () => ({ x: 0, y: 0 }));
-  const color = rgb(CONFIG.visual.colors.magic);
+  const color = rgb(CONFIG.visual.colors.rose);
 
   const positions = new Float32Array(n * 3);
   const colors = new Float32Array(n * 3);
