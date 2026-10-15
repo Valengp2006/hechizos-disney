@@ -145,6 +145,9 @@ async function start() {
   }
 }
 
+// Desbloqueo explícito: lo llama la pantalla de inicio desde un clic.
+export function unlockAudio() { start(); }
+
 // Se llama una vez al arrancar la app: espera el primer gesto.
 export function initAudio() {
   const go = () => {

@@ -17,6 +17,7 @@ import { createIntro } from './intro.js';
 import { createHelp } from './help.js';
 import { createTutorial } from './tutorial.js';
 import { createGuide } from './guide.js';
+import { createStartMenu } from './start.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -34,6 +35,14 @@ let dev = false;
 // La introducción es de performance; en dev se salta (salvo ?intro) para probar rápido.
 const introWanted = () =>
   CONFIG.intro.enabled && (!dev || CONFIG.intro.enabledInDev || new URLSearchParams(location.search).has('intro'));
+const menuWanted = () =>
+  CONFIG.start.enabled && (!dev || CONFIG.start.enabledInDev || new URLSearchParams(location.search).has('intro'));
+// Comenzar: arranca el cuento (y, tras él, el juego).
+function beginAdventure(now) {
+  started = true;
+  lastSuccessAt = now;
+  startIntro(now);
+}
 function startIntro(now) {
   if (introWanted()) { intro.restart(now); tutorialPending = CONFIG.tutorial.enabled; }
   else { intro.skip(); tutorialPending = false; }
@@ -44,6 +53,9 @@ let letters = null;
 let finale = null;
 let intro = null;
 let help = null;
+let startMenu = null;
+let started = false; // true una vez pulsado "Comenzar" (o si el inicio está desactivado)
+const idleInput = { x: 0, y: 0, vx: 0, vy: 0, grab: false, source: 'idle', active: false };
 let tutorial = null;
 let guide = null;
 let tutorialPending = false;
@@ -123,13 +135,18 @@ loadFont().then((font) => {
   scene.add(letters.object);
   finale = createFinale({
     scene, letters,
-    onReset: (now) => { lastSuccessAt = now; startIntro(now); },
+    onReset: (now) => {
+      lastSuccessAt = now;
+      // Para el siguiente visitante: vuelve la pantalla de inicio (o directo el cuento).
+      if (CONFIG.start.afterReset && menuWanted()) { started = false; startMenu.show(); } else beginAdventure(now);
+    },
   });
   intro = createIntro({ scene, font, onLine: (i, n) => sfx.story(i, n) });
   help = createHelp({ scene });
   tutorial = createTutorial({ letters });
   guide = createGuide({ letters });
-  startIntro(performance.now());
+  startMenu = createStartMenu({ onStart: beginAdventure });
+  if (menuWanted()) startMenu.show(); else beginAdventure(performance.now());
   resize();
   syncDebug();
 }).catch(console.error);
@@ -151,7 +168,9 @@ renderer.setAnimationLoop(() => {
   const frameStart = performance.now();
   const dt = Math.min(clock.getDelta(), 0.1); // tope: una pestaña dormida no hace saltar nada
   updateInput(dt);
-  finale?.update(dt * 1000, performance.now(), input);
+  // Antes de comenzar las letras no reaccionan: se les da una entrada inactiva.
+  const gameInput = started ? input : idleInput;
+  finale?.update(dt * 1000, performance.now(), gameInput);
   dust.setLift(Math.max(letters?.lift() ?? 0, finale?.lift() ?? 0));
   dust.setWarmth(Math.max(letters?.warmth() ?? 0, finale?.warmth() ?? 0));
   dust.update(dt, clock.elapsedTime, input);
@@ -160,7 +179,7 @@ renderer.setAnimationLoop(() => {
   if (Math.hypot(input.x - lastPx, input.y - lastPy) > 2 || input.grab) lastRealMove = performance.now();
   lastPx = input.x; lastPy = input.y;
   const idleMs = performance.now() - lastRealMove;
-  const invite = finale?.phase() === 'play' && !intro?.active() && !tutorial?.active() && idleMs > CONFIG.visual.attractAfterMs;
+  const invite = started && finale?.phase() === 'play' && !intro?.active() && !tutorial?.active() && idleMs > CONFIG.visual.attractAfterMs;
   const t = clock.elapsedTime;
   const now = performance.now();
   // Tras el cuento arranca el mini-tutorial; su cursor fantasma juega cada minijuego.
@@ -170,9 +189,9 @@ renderer.setAnimationLoop(() => {
   ghostInput.y = window.innerHeight * (0.5 + 0.25 * Math.sin(t * 0.47 + 1));
   ghostInput.active = invite;
   ghost.update(ghostInput);
-  const { fired, report } = recognizer.push(input, now);
+  const { fired, report } = recognizer.push(gameInput, now);
   if (fired) onGesture(fired, report.firedTrail, { heldMs: report.grab.heldMs });
-  letters?.update(dt * 1000, clock.elapsedTime, input, report.progress);
+  letters?.update(dt * 1000, clock.elapsedTime, gameInput, report.progress);
   if (dev && debugOn) gestureDebug.update(report, now, letters?.states());
   // Sonido: cada cambio de estado de una letra y cada fase del final tiene su sonido.
   letters?.letters.forEach((l) => {
@@ -208,7 +227,7 @@ renderer.setAnimationLoop(() => {
   // Guía fija: dice qué hacer y marca (con un latido) la letra del paso actual.
   const guideTarget = guide?.update({
     current: cur, tutLetter, tutPhase: tut ? tut.phase : null,
-    phase: finale?.phase() ?? 'play', hidden: !!intro?.active(),
+    phase: finale?.phase() ?? 'play', hidden: !started || !!intro?.active(),
   });
   letters?.letters.forEach((l) => { l.beacon = CONFIG.guide.beacon && l === guideTarget && !tutLetter ? 1 : 0; });
   // El gesto se dibuja junto a la letra del paso actual cuando la persona lleva un rato cerca sin

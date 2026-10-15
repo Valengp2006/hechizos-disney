@@ -26,6 +26,8 @@ Cada letra se descubre en **tres tiempos**: el **gesto** la abre, un **minijuego
 
 Sin fallo ni números: el progreso se ve en la propia luz. **Quien juega es la persona**: si se atasca, tras ~14 s el reto se vuelve más permisivo (nunca se completa solo) y la guía la acompaña con indicaciones vivas; si se aleja ~7 s, el juego se cierra.
 
+**Pantalla de inicio:** al cargar (y para cada visitante nuevo, tras el reinicio) pide un clic en "Comenzar". Ese clic enciende el audio —el navegador lo exige— y da paso al cuento. Enter o espacio también sirven. En dev se salta; `?intro` la muestra.
+
 **Inicio de cuento:** al arrancar (y para cada visitante nuevo) una frase se traza con un lápiz de luz antes de poder jugar.
 
 **Ayuda:** si en ~20 s no despierta ninguna letra, junto a la letra más cercana aparece un trazo de luz que dibuja su gesto (círculo, flecha hacia arriba, barrido, zigzag, anillo que respira o que se recoge).
@@ -55,7 +57,7 @@ npm run dev                    # http://localhost:5173
 npm run build                  # dist/ para GitHub Pages (se despliega solo al hacer push a main)
 ```
 
-**Sonido:** necesita un primer gesto (clic, toque o tecla) para encenderse; en una exhibición sin clic, abrir Chrome con `--autoplay-policy=no-user-gesture-required`. La música en loop está apagada por ahora (`audio.music`); suena la capa mágica sintetizada (`audio.sfx` en `config.js`), que incluye una nota por cada línea del cuento.
+**Sonido:** lo enciende el clic de la pantalla de inicio (el navegador exige un gesto), así que ya no hace falta ninguna opción de Chrome. La música en loop está apagada por ahora (`audio.music`); suena la capa mágica sintetizada (`audio.sfx` en `config.js`), que incluye una nota por cada línea del cuento.
 
 La cámara requiere HTTPS (o `localhost`); hoy no se usa. No se guarda ni transmite nada de ella.
 

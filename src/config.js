@@ -3,6 +3,17 @@
 // Cada parámetro dice qué controla y qué esperar si se sube o se baja.
 
 export const CONFIG = {
+  // ---------- Pantalla de inicio ----------
+  // Pide un clic para comenzar: enciende el audio (el navegador lo exige) y arranca el cuento.
+  start: {
+    enabled: true,
+    enabledInDev: false,      // en dev se salta (salvo ?intro, que también la muestra)
+    afterReset: true,         // vuelve a aparecer para cada visitante nuevo, tras el reinicio
+    eyebrow: 'Una aventura de luz',
+    button: 'Comenzar',
+    hint: 'Haz clic para encender la luz y el sonido',
+  },
+
   // ---------- Introducción (inicio de cuento) ----------
   // Decisión consciente: el encargo pide no explicar el juego con texto; esta frase es
   // narrativa (no da instrucciones) y se registra en la bitácora. Se escribe con la propia
