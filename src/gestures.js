@@ -186,18 +186,19 @@ export function createRecognizer(cfg = CONFIG.gestures) {
     // alguna y conserva el trozo que lo cumplió (`trail`). El progreso es el mejor de todas.
     const slices = cfg.windowFractions.map((f) => win.filter((s) => s.t >= now - cfg.windowMs * f));
     const c1p = (v) => Math.min(1, Math.max(0, v));
+    // Claves explícitas (NO `fn.name`: el minificador renombra las funciones y rompe la producción).
     const progOf = {
-      measureCircle: (m) => c1p(m.angle / cfg.circle.minAngleDeg) * c1p(m.aspect / 0.6) *
+      circle: (m) => c1p(m.angle / cfg.circle.minAngleDeg) * c1p(m.aspect / 0.6) *
         (m.radius >= cfg.circle.minRadius ? c1p(1 - Math.max(0, m.radiusVar - cfg.circle.radiusTolerance)) : 0),
-      measureRise: (m) => c1p(m.distance / cfg.rise.minDistance) * (m.lateral <= cfg.rise.maxLateralRatio * 1.5 ? 1 : 0.3),
-      measureSweep: (m) => c1p(m.distance / cfg.sweep.minDistance) * (m.vertical <= cfg.sweep.maxVerticalRatio * 1.5 ? 1 : 0.3),
-      measureZigzag: (m) => c1p(m.changes / cfg.zigzag.minSignChanges),
+      rise: (m) => c1p(m.distance / cfg.rise.minDistance) * (m.lateral <= cfg.rise.maxLateralRatio * 1.5 ? 1 : 0.3),
+      sweep: (m) => c1p(m.distance / cfg.sweep.minDistance) * (m.vertical <= cfg.sweep.maxVerticalRatio * 1.5 ? 1 : 0.3),
+      zigzag: (m) => c1p(m.changes / cfg.zigzag.minSignChanges),
     };
-    const pick = (fn) => {
+    const pick = (key, fn) => {
       let first = null, best = 0, passing = null;
       for (const sl of slices) {
         const m = fn(sl, cfg);
-        const pr = m.pass ? 1 : progOf[fn.name](m);
+        const pr = m.pass ? 1 : progOf[key](m);
         if (pr > best) best = pr;
         if (!first) first = { ...m, trail: sl };
         if (m.pass && !passing) passing = { ...m, trail: sl };
@@ -207,10 +208,10 @@ export function createRecognizer(cfg = CONFIG.gestures) {
       return out;
     };
     const report = {
-      circle: pick(measureCircle),
-      rise: pick(measureRise),
-      sweep: pick(measureSweep),
-      zigzag: pick(measureZigzag),
+      circle: pick('circle', measureCircle),
+      rise: pick('rise', measureRise),
+      sweep: pick('sweep', measureSweep),
+      zigzag: pick('zigzag', measureZigzag),
       still: measureStill(now),
       grab: { heldMs: grabHeldMs, pass: grabPass },
       cooling: false,

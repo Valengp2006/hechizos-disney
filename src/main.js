@@ -157,6 +157,7 @@ resize();
 
 // Diagnóstico (dev): avisa de geometrías con posiciones NaN, que three.js no puede dibujar.
 let nanChecked = 0;
+let frameErrorLogged = false;
 function checkNaN() {
   scene.traverse((o) => {
     const pos = o.geometry && o.geometry.attributes && o.geometry.attributes.position;
@@ -168,6 +169,9 @@ function checkNaN() {
 }
 
 renderer.setAnimationLoop(() => {
+  // Red de seguridad: si un frame falla, se registra una sola vez y el ciclo sigue (antes un
+  // error por frame congelaba toda la escena).
+  try {
   const frameStart = performance.now();
   const dt = Math.min(clock.getDelta(), 0.1); // tope: una pestaña dormida no hace saltar nada
   updateInput(dt);
@@ -247,4 +251,8 @@ renderer.setAnimationLoop(() => {
   else help?.update(now, dt * 1000, cur && cur.gesture ? cur : null, stuck || forceHelp || showNear);
   renderer.render(scene, camera);
   tickPanel(performance.now() - frameStart); // incluye la lógica y el envío de dibujo
+  } catch (err) {
+    if (!frameErrorLogged) { frameErrorLogged = true; console.error('[frame]', err); }
+    try { renderer.render(scene, camera); } catch (e) { /* nada más que hacer */ }
+  }
 });
