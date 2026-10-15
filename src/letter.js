@@ -54,6 +54,8 @@ class Letter {
     this.warmth = 0; // cuánto dora el hechizo al polvo ambiental (0..1)
     this.chargeLevel = 0; // 0..1: cuánto lleva agarrada la letra (solo Y lo usa)
     this.hint = 0;        // 0..1: cuánto insinúa el polvo su gesto (letra sensible)
+    this.gestureProgress = 0; // 0..1: cuánto de SU gesto lleva el trazo actual (lo pone el reparto)
+    this.listenHint = 0;  // 0..1 suavizado de lo anterior: la letra se entreabre mientras se acierta
     this.progress = 0;    // 0..1: avance del hechizo mientras está encantada
     this.cheerT = 1e9;    // ms desde el último saltito de alegría (letra despierta)
     this.exciteT = 1e9;   // ms desde el último avivamiento (letra aún dormida)
@@ -141,6 +143,10 @@ class Letter {
     this.group.position.set(this.pos.x, this.pos.y, 0);
     this.group.scale.setScalar(this.scale);
     this.flashMat.size = Math.min(sizePx * 1.2, 260); // tope: en letras grandes el halo quemaba
+    // Densidad constante en pantalla: con letras pequeñas los puntos están más juntos, así
+    // que se hacen más chicos para que la luz no se sature (y crecen un poco en las grandes).
+    const spacingPx = CONFIG.font.sampleSpacing * this.scale;
+    this.pointMat.size = Math.min(8, Math.max(3, spacingPx * 1.4));
   }
 
   // Distancia (px) de un punto a la caja de la letra; 0 si está dentro.
@@ -179,6 +185,9 @@ class Letter {
     if (this.state === STATE.LATENT || this.state === STATE.SENSITIVE) {
       this.state = near ? STATE.SENSITIVE : STATE.LATENT;
     }
+    // Gesto a medias: si el trazo va por buen camino, la letra se entreabre poco a poco.
+    const lhTarget = this.state === STATE.SENSITIVE ? this.gestureProgress : 0;
+    this.listenHint += (lhTarget - this.listenHint) * Math.min(1, (dtMs / 1000) * 6);
 
     let lineOp = 0, pointOp = 0, dustOp = L.latentDustOpacity, tremble = 0, flashOp = 0;
     let color = this.cRose;
@@ -190,6 +199,9 @@ class Letter {
       case STATE.SENSITIVE:
         dustOp += L.sensitiveGain;
         tremble = L.trembleAmplitude;
+        // Entreabrirse en proporción al avance del gesto propio (rosa suave).
+        lineOp = L.listeningOpacity * this.listenHint;
+        pointOp = L.listeningOpacity * 0.55 * this.listenHint;
         break;
       case STATE.LISTENING: {
         // Se entreabre y se apaga: un pulso suave de ida y vuelta.
@@ -263,7 +275,7 @@ class Letter {
     this.pointMat.color.copy(color);
     this.lineMat.opacity = lineOp;
     this.pointMat.opacity = pointOp;
-    this.flashMat.opacity = flashOp;
+    this.flashMat.opacity = flashOp * CONFIG.visual.flashGain;
     this.dustMat.opacity = Math.min(1, dustOp);
 
     // Polvo: se estremece (oscila con fase propia) cuando la letra está sensible.
@@ -335,7 +347,8 @@ export function createLetters(font) {
     screen = { w, h };
     for (const l of letters) {
       const p = CONFIG.letters.layout[l.char];
-      l.place(p.x * w, p.y * h, p.size * h);
+      // El tamaño sigue al alto, pero en pantallas estrechas (vertical) se limita por el ancho.
+      l.place(p.x * w, p.y * h, p.size * Math.min(h, w * 0.75));
       l.flashBase = l.flashMat.size;
     }
   }
@@ -352,7 +365,7 @@ export function createLetters(font) {
   }
 
   let target = null;
-  function update(dtMs, timeS, input) {
+  function update(dtMs, timeS, input, progress = {}) {
     target = input.active ? nearest(input.x, input.y) : null;
     // Agarrar sobre una letra que se conjura agarrando (Y): se "carga" mientras se mantiene.
     for (const l of letters) {
@@ -360,6 +373,7 @@ export function createLetters(font) {
       l.chargeLevel = holding
         ? Math.min(1, l.chargeLevel + dtMs / CONFIG.spells.chargeMs)
         : Math.max(0, l.chargeLevel - dtMs / 200);
+      l.gestureProgress = l === target ? (progress[l.gesture] || 0) : 0;
       l.update(dtMs, timeS, l === target);
     }
     chains();

@@ -19,7 +19,7 @@ const bbox = (pts) => {
 
 // Círculo: ángulo acumulado alrededor del centro de la caja, con radio casi constante.
 function measureCircle(pts, cfg) {
-  if (pts.length < 8) return { angle: 0, radiusVar: 0, radius: 0, pass: false };
+  if (pts.length < 8) return { angle: 0, radiusVar: 0, radius: 0, aspect: 0, pass: false };
   const b = bbox(pts);
   const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
   let total = 0, prev = Math.atan2(pts[0].y - cy, pts[0].x - cx);
@@ -37,8 +37,10 @@ function measureCircle(pts, cfg) {
   const variance = radii.reduce((s, r) => s + (r - mean) ** 2, 0) / radii.length;
   const angle = (Math.abs(total) * 180) / Math.PI;
   const radiusVar = mean > 0 ? Math.sqrt(variance) / mean : 1;
+  // Redondez: un círculo ocupa una caja casi cuadrada; una línea o un vaivén, no.
+  const aspect = Math.max(b.w, b.h) > 0 ? Math.min(b.w, b.h) / Math.max(b.w, b.h) : 0;
   return {
-    angle, radiusVar, radius: mean,
+    angle, radiusVar, radius: mean, aspect,
     pass: angle >= cfg.circle.minAngleDeg && radiusVar <= cfg.circle.radiusTolerance &&
       mean >= cfg.circle.minRadius,
   };
@@ -98,6 +100,7 @@ export function createRecognizer(cfg = CONFIG.gestures) {
   let grabStart = 0;
   let lastFired = null;
   let lastFiredAt = -Infinity;
+  let lastMoveT = 0; // último instante con movimiento claro (para el progreso de "quieto")
 
   const keepMs = Math.max(cfg.windowMs, cfg.still.durationMs) + 100;
 
@@ -144,6 +147,14 @@ export function createRecognizer(cfg = CONFIG.gestures) {
       return { fired: null, report: { ...emptyReport(now), cooling: true } };
     }
     samples.push({ x: input.x, y: input.y, t: now });
+    // Movimiento: si la velocidad entre las dos últimas muestras supera el doble del umbral.
+    if (samples.length < 2) lastMoveT = now;
+    else {
+      const a = samples[samples.length - 2];
+      const dtS = (now - a.t) / 1000;
+      const sp = dtS > 0 ? Math.hypot(input.x - a.x, input.y - a.y) / dtS : 0;
+      if (sp > cfg.still.speedThreshold * 2) lastMoveT = now;
+    }
     while (samples.length && samples[0].t < now - keepMs) samples.shift();
 
     const win = samples.filter((s) => s.t >= now - cfg.windowMs);
@@ -170,6 +181,19 @@ export function createRecognizer(cfg = CONFIG.gestures) {
       lastFired, lastFiredAt,
       trail: win,
     };
+    // Progreso 0..1 de cada gesto: cuánto de su umbral va cumpliendo la trayectoria actual.
+    // Sirve para que una letra "escuche" mientras se hace el gesto, antes de completarse.
+    const c1 = (v) => Math.min(1, Math.max(0, v));
+    const rc = report.circle, rr = report.rise, rs = report.sweep, rz = report.zigzag;
+    report.progress = {
+      circle: rc.pass ? 1 : c1(rc.angle / cfg.circle.minAngleDeg) * c1(rc.aspect / 0.6) *
+        (rc.radius >= cfg.circle.minRadius ? c1(1 - Math.max(0, rc.radiusVar - cfg.circle.radiusTolerance)) : 0),
+      rise: rr.pass ? 1 : c1(rr.distance / cfg.rise.minDistance) * (rr.lateral <= cfg.rise.maxLateralRatio * 1.5 ? 1 : 0.3),
+      sweep: rs.pass ? 1 : c1(rs.distance / cfg.sweep.minDistance) * (rs.vertical <= cfg.sweep.maxVerticalRatio * 1.5 ? 1 : 0.3),
+      zigzag: c1(rz.changes / cfg.zigzag.minSignChanges),
+      still: c1((now - lastMoveT) / cfg.still.durationMs),
+      grab: 0, // el agarre ya tiene su propia retroalimentación (la semilla de la Y)
+    };
 
     // Prioridad: acciones deliberadas primero; entre trazos, el más específico primero
     // (círculo antes que zigzag, porque un círculo también invierte la dirección en x).
@@ -190,6 +214,7 @@ export function createRecognizer(cfg = CONFIG.gestures) {
     return {
       circle: { pass: false }, rise: { pass: false }, sweep: { pass: false },
       zigzag: { pass: false }, still: { pass: false }, grab: { pass: false },
+      progress: { circle: 0, rise: 0, sweep: 0, zigzag: 0, still: 0, grab: 0 },
       cooling: false, lastFired, lastFiredAt, trail: [],
     };
   }

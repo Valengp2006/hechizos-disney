@@ -42,10 +42,18 @@ export function createFinale({ scene, letters }) {
     const n = letters.letters.length;
     const widthSum = letters.letters.reduce((s, l) => s + l.shape.width / REF, 0);
     let S = (F.wordWidthRatio * W) / (widthSum + (n - 1) * F.wordGap);
-    S = Math.min(S, 0.34 * H);
+    S = Math.min(S, 0.34 * Math.min(H, W * 0.75));
+    // Que la torre más alta (con su mástil) quepa arriba, también en pantallas muy anchas.
+    const maxLetterH = Math.max(...letters.letters.map((l) => l.shape.height)) / REF;
+    const maxTower = Math.max(...Object.values(F.towerHeights));
+    const room = F.wordBaseline * H - 0.04 * H;
+    S = Math.min(S, room / (maxLetterH * (1 + maxTower + 0.75)));
     const total = widthSum * S + (n - 1) * F.wordGap * S;
     let x = (W - total) / 2;
-    const base = F.wordBaseline * H;
+    // El castillo (letras + torres) se centra en vertical; wordBaseline es el tope por abajo.
+    // Así en pantallas verticales no queda pegado al fondo con todo el cielo vacío.
+    const blockH = maxLetterH * S * (1 + maxTower + 0.75);
+    const base = Math.min(F.wordBaseline * H, 0.52 * H + blockH / 2);
     return letters.letters.map((l) => {
       const w = (l.shape.width / REF) * S, h = (l.shape.height / REF) * S;
       const to = { cx: x + w / 2, cy: base - h / 2, size: S };

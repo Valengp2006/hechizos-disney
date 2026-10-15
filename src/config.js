@@ -52,6 +52,9 @@ export const CONFIG = {
       amber: [255, 214, 150],   // ámbar: calidez, luz de luciérnaga
       awake: [255, 205, 110],   // dorado: letra despierta
     },
+    // Multiplicador de los destellos grandes de los hechizos (0..1). Bájalo si en pantallas
+    // grandes o con proyector el brillo se acumula y quema; 0 los apaga.
+    flashGain: 0.7,
     // Escala del halo de cada luz. Más = halo más grande y suave.
     glow: 1.2,
     // Largo de la estela del punto de luz (en muestras, 1 por frame). Más = trazos más largos.
@@ -139,9 +142,9 @@ export const CONFIG = {
       D: { x: 0.20, y: 0.30, size: 0.34 },
       I: { x: 0.40, y: 0.74, size: 0.24 },
       S: { x: 0.60, y: 0.26, size: 0.28 },
-      N: { x: 0.84, y: 0.62, size: 0.38 },
+      N: { x: 0.84, y: 0.62, size: 0.35 },
       E: { x: 0.22, y: 0.74, size: 0.20 },
-      Y: { x: 0.62, y: 0.62, size: 0.30 },
+      Y: { x: 0.62, y: 0.62, size: 0.28 },
     },
     // Polvo tenue que marca la zona de cada letra latente.
     latentDustCount: 36,
@@ -217,7 +220,7 @@ export const CONFIG = {
     idleResetMs: 30000,       // sin interacción -> todo vuelve a la oscuridad
     closingMs: 2500,          // cuánto tarda el castillo en apagarse al reiniciar
     wordWidthRatio: 0.72,     // ancho de la palabra DISNEY respecto al ancho de pantalla
-    wordBaseline: 0.78,       // altura (fracción del alto) donde se apoyan las letras de la palabra
+    wordBaseline: 0.78,       // tope (fracción del alto) de la línea base de la palabra; se centra si cabe más arriba
     wordGap: 0.08,            // separación entre letras de la palabra (fracción de su tamaño)
     // Castillo genérico: una torre por letra, de alturas y anchos distintos (asimétrico).
     // Altura de cada torre sobre su letra (fracción del alto de la letra) y ancho (de la letra).

@@ -121,7 +121,7 @@ renderer.setAnimationLoop(() => {
   const now = performance.now();
   const { fired, report } = recognizer.push(input, now);
   if (fired) onGesture(fired, report.firedTrail, { heldMs: report.grab.heldMs });
-  letters?.update(dt * 1000, clock.elapsedTime, input);
+  letters?.update(dt * 1000, clock.elapsedTime, input, report.progress);
   if (dev && debugOn) gestureDebug.update(report, now, letters?.states());
   renderer.render(scene, camera);
   tickPanel(performance.now() - frameStart); // incluye la lógica y el envío de dibujo
