@@ -2,12 +2,13 @@
 //
 // Descargas quebradas saltan entre las dos astas de la N, iluminándolas como teclas; la
 // última descarga sigue la propia diagonal, que se vuelve el relámpago. Al terminar, una
-// chispa sale a la letra más cercana y la enciende un instante (contagio).
+// chispa pasa el relevo a la SIGUIENTE letra de la palabra (N -> E) y la enciende un
+// instante (contagio). Si ya está despierta, la hace saltar.
 // Todo sale de la N: puntos de su trazo, agrupados por asta, y su diagonal con ruido.
 //
 // Línea de tiempo (k = 0..1 sobre spells.durationMs.N):
 //   descarga i en k = 0.10 + i * boltStagger, dura boltLife; la última es la diagonal.
-//   Luego la chispa viaja a la letra vecina y la letra queda dorada.
+//   Luego la chispa viaja a la letra siguiente (más lenta cuanto más lejos) y la N queda dorada.
 // Determinista: alturas y quiebres salen de funciones fijas del índice (el "ruido" no
 // decide qué pasa, solo decora; cambia cada ~35 ms para parpadear).
 import * as THREE from 'three';
@@ -18,7 +19,8 @@ const clamp01 = (v) => Math.min(1, Math.max(0, v));
 const smooth = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); };
 const frac = (v) => v - Math.floor(v);
 const START = 0.1;
-const SEND = 0.17;   // fracción de la duración que tarda la chispa en llegar a la vecina
+// Duración del vuelo de la chispa (fracción de la duración total): entre 0.12 y 0.30 según
+// la distancia, para que un viaje largo no pase demasiado rápido.
 const ECHOES = 6;
 
 // "Ruido" determinista en [-1, 1] a partir de números (no es azar: misma entrada, misma salida).
@@ -73,20 +75,25 @@ export function createLightning(letter) {
   const boltDots = mk(B * (S + 1), 15, false);  // brillo en cada quiebre
   const ball = mk(1 + ECHOES, 16, false);       // la chispa que viaja a la vecina
 
-  // Al final la chispa vuela a la letra más cercana (por distancia entre centros).
-  let target = null, pending = null, sent = false;
-  function nearestPeer() {
-    const sc = letter.scale;
-    const cx = letter.pos.x + (w * sc) / 2, cy = letter.pos.y + (h * sc) / 2;
-    let best = null, bd = Infinity;
-    for (const o of letter.peers) {
-      if (o === letter) continue;
-      const d = Math.hypot(o.pos.x + (o.shape.width * o.scale) / 2 - cx, o.pos.y + (o.shape.height * o.scale) / 2 - cy);
-      if (d < bd) { bd = d; best = o; }
-    }
-    return best;
+  // Al final la chispa pasa el relevo a la siguiente letra de la palabra (en el orden de
+  // `font.word`, dando la vuelta): N -> E. Así cada contagio repite el orden de DISNEY.
+  let target = null, pending = null, sent = false, send = 0.17;
+  function nextPeer() {
+    const peers = letter.peers;
+    const i = peers.indexOf(letter);
+    return peers[(i + 1) % peers.length];
   }
-  function start() { target = nearestPeer(); pending = null; sent = false; }
+  function start() {
+    target = nextPeer();
+    pending = null; sent = false;
+    // Más lejos, más lento: el vuelo no debe ser un parpadeo al cruzar la pantalla.
+    const sc = letter.scale;
+    const d = Math.hypot(
+      target.pos.x + (target.shape.width * target.scale) / 2 - (letter.pos.x + (w * sc) / 2),
+      target.pos.y + (target.shape.height * target.scale) / 2 - (letter.pos.y + (h * sc) / 2),
+    );
+    send = 0.12 + 0.18 * clamp01(d / (0.8 * window.innerWidth));
+  }
   const takeArrival = () => { const t = pending; pending = null; return t; };
 
   const tmp = new THREE.Color();
@@ -144,11 +151,11 @@ export function createLightning(letter) {
     }
 
     // Chispa que viaja a la letra vecina.
-    const sendT0 = endK, sendT1 = endK + SEND;
+    const sendT0 = endK, sendT1 = endK + send;
     for (let e = 0; e <= ECHOES; e++) {
       const kk = k - e * 0.008;
       if (!target || kk < sendT0 || kk > sendT1) { set(ball.col, e, letter.cAwake, 0); continue; }
-      const u = clamp01((kk - sendT0) / SEND);
+      const u = clamp01((kk - sendT0) / send);
       const sc = letter.scale;
       const tx = (target.pos.x + (target.shape.width * target.scale) / 2 - letter.pos.x) / sc;
       const ty = (target.pos.y + (target.shape.height * target.scale) / 2 - letter.pos.y) / sc;

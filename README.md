@@ -29,7 +29,7 @@ Pantalla casi negra y un punto de luz que sigue al cursor. Las letras no se ven:
 **Encadenamientos:** los hechizos se afectan entre sí con reglas fijas (contacto → efecto):
 - Si la **cinta de la S** va hacia un **portal abierto de la D**, es absorbida girando en espiral y sale dorada.
 - Si la cinta cruza la **columna de la I** en gravedad invertida, la columna la levanta.
-- La **chispa del relámpago de la N** viaja a la letra más cercana y la enciende un instante (si es la E, destellan sus haces).
+- La **chispa del relámpago de la N** pasa el relevo a la **siguiente letra de la palabra** (N → E) y la enciende un instante (en la E, destellan sus haces); si ya está despierta, la hace saltar.
 - La luz del portal avisa a las letras vecinas, y cuando una letra despierta todas las despiertas parpadean juntas.
 
 Cuando las seis despiertan, convergen en DISNEY, hay un silencio y aparece un castillo genérico hecho con las propias letras. Tras 30 s sin interacción, todo vuelve a la oscuridad.
