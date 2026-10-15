@@ -31,3 +31,10 @@ Un "estilo cuento ilustrado": cielo de crepúsculo pintado, luz cálida, bordes 
 ## A observar con personas
 - ¿Se percibe "más cuento" o "más videojuego"? Comparar con `backdrop.enabled: false` y `icons.shading: 0`.
 - ¿Se pierde legibilidad de las letras sobre un fondo menos oscuro?
+
+## Castillo pintado (2026-10-15)
+- **Siluetas rellenas** (`finale.castleFill`): torres, muros y almenas pasan de línea fina a una silueta violeta profunda, con un poco de calor desde abajo (la luz de las letras) y fundiéndose con el cielo arriba. El contorno fino queda como filo.
+- **Ventanas encendidas** (rectángulos dorados que parpadean), **banderines rellenos** (triángulos rosa y oro que ondean) y **niebla cálida** al pie (`finale.castleMist`).
+- Sigue siendo genérico: asimétrico, sin torre central ni techos cónicos; las torres salen de las letras.
+- Hallazgos al probarlo: las siluetas bajaban a media letra y dejaban una banda detrás (ahora apoyan sobre el borde superior de cada letra), y la niebla más el aura lavaban las letras (se bajaron `castleMist` y `icons.aura`). Los colores de relleno se aclaraban por tratarse como lineales: se convierten desde sRGB.
+- Parámetros: `castleFill`, `castleTop`, `castleBottom`, `castleMist`.

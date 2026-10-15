@@ -105,6 +105,10 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
       w: l.shape.width * l.scale, h: l.shape.height * l.scale,
     }));
     const seg = (x0, y0, x1, y1, ta, tb, kind = 'wall') => segs.push({ x0, y0, x1, y1, ta, tb, kind });
+    // Rellenos: rectángulos que crecen desde `yb` hasta `yt` y triángulos que se "abren" desde su base.
+    const rects = []; // {x0,x1,yb,yt,ta,tb,k}
+    const tris = [];  // {pts:[[x,y]x3], ta, tb, k}
+    const rect = (x0, x1, yb, yt, ta, tb, k = 'solid') => rects.push({ x0, x1, yb, yt, ta, tb, k });
 
     boxes.forEach((b, i) => {
       const cx = b.x + b.w / 2;
@@ -113,6 +117,8 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
       const ext = b.h * F.towerHeights[b.char];
       const yTop = b.y - ext;
       const ta = 0.05 + 0.08 * i, tb = ta + 0.32; // la torre crece de abajo hacia arriba
+      // Silueta de la torre: apoya sobre el borde superior de la letra, con un solape pequeño.
+      rect(xl, xr, b.y + 0.12 * b.h, yTop, ta, tb);
       // Cuerpo de la torre: dos lados.
       seg(xl, b.y, xl, yTop, ta, tb, 'tower');
       seg(xr, b.y, xr, yTop, ta, tb, 'tower');
@@ -122,6 +128,7 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
         const n = 3, mw = tw / (2 * n - 1), mh = b.h * 0.14;
         let x = xl;
         for (let m = 0; m < n; m++) {
+          rect(x, x + mw, yTop + 1, yTop - mh, t1, t2);
           seg(x, yTop, x, yTop - mh, t1, t2, 'crown');
           seg(x, yTop - mh, x + mw, yTop - mh, t1, t2, 'crown');
           seg(x + mw, yTop - mh, x + mw, yTop, t1, t2, 'crown');
@@ -132,6 +139,11 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
         seg(xl, yTop, xr, yTop, t1, t2, 'crown');
         const mast = b.h * 0.6;
         seg(cx, yTop, cx, yTop - mast, t1, t2 + 0.05, 'mast');
+        // Banderín relleno: un triángulo que ondea en la punta del mástil.
+        tris.push({
+          pts: [[cx, yTop - mast], [cx + tw * 0.78, yTop - mast + mast * 0.1], [cx, yTop - mast + mast * 0.3]],
+          ta: t2 + 0.02, tb: t2 + 0.1, k: 'flag', ph: i,
+        });
         // Banderín: tres trazos; el extremo se mueve en update (onda).
         segs.push({ x0: cx, y0: yTop - mast, x1: cx + tw * 0.7, y1: yTop - mast * 0.85,
           ta: t2, tb: t2 + 0.05, kind: 'flag', bx: cx + tw * 0.7, by: yTop - mast * 0.85, ph: i });
@@ -140,7 +152,12 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
       // Ventanas: dos o tres puntos cálidos en la torre.
       const nw = 2 + (i % 2);
       for (let k = 0; k < nw; k++) {
-        dots.push({ x: cx + (k % 2 ? 0.1 : -0.1) * tw, y: yTop + ext * (0.2 + 0.25 * k), ta: 0.7 + 0.04 * (i + k), kind: 'window' });
+        const wx = cx + (k % 2 ? 0.1 : -0.1) * tw, wy = yTop + ext * (0.2 + 0.25 * k);
+        const wtA = 0.7 + 0.04 * (i + k);
+        dots.push({ x: wx, y: wy, ta: wtA, kind: 'window' });
+        // Ventana encendida: un rectángulo cálido con la punta arriba.
+        const ws = Math.max(4, 0.09 * tw);
+        rect(wx - ws * 0.5, wx + ws * 0.5, wy + ws * 0.9, wy - ws * 0.9, wtA, wtA + 0.1, 'window');
       }
     });
 
@@ -153,9 +170,11 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
       const y = Math.min(wallY(a), wallY(c));
       const ta = 0.52 + 0.04 * i, tb = ta + 0.1;
       seg(xa, y, xc, y, ta, tb, 'wall');
+      rect(xa, xc, Math.max(a.y, c.y) + 0.12 * a.h, y, ta, tb);         // el muro, relleno
       const n = Math.max(2, Math.round((xc - xa) / (a.h * 0.16)));
       for (let m = 0; m < n; m++) {
         const x = xa + ((m + 0.25) / n) * (xc - xa), mw = ((xc - xa) / n) * 0.5, mh = a.h * 0.07;
+        rect(x, x + mw, y + 1, y - mh, tb, tb + 0.04);
         seg(x, y, x, y - mh, tb, tb + 0.04, 'wall');
         seg(x, y - mh, x + mw, y - mh, tb, tb + 0.04, 'wall');
         seg(x + mw, y - mh, x + mw, y, tb, tb + 0.04, 'wall');
@@ -192,9 +211,37 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
     }));
     dotObj.frustumCulled = false;
 
+    // Rellenos: una malla de triángulos con color por vértice (calor abajo, violeta arriba).
+    const nv = rects.length * 6 + tris.length * 3;
+    const fillPos = new Float32Array(nv * 3), fillCol = new Float32Array(nv * 3);
+    const fillGeo = new THREE.BufferGeometry();
+    fillGeo.setAttribute('position', new THREE.BufferAttribute(fillPos, 3));
+    fillGeo.setAttribute('color', new THREE.BufferAttribute(fillCol, 3));
+    const fillMat = new THREE.MeshBasicMaterial({
+      vertexColors: true, transparent: true, opacity: F.castleFill, depthWrite: false, side: THREE.DoubleSide,
+    });
+    const fillMesh = new THREE.Mesh(fillGeo, fillMat);
+    fillMesh.frustumCulled = false;
+    fillMesh.renderOrder = -6; // detrás de las letras y de las líneas
+
+    // Niebla cálida al pie: un halo ancho y bajo sobre la línea del suelo.
+    const mistPos = new Float32Array(boxes.length * 3), mistCol = new Float32Array(boxes.length * 3);
+    const mistGeo = new THREE.BufferGeometry();
+    mistGeo.setAttribute('position', new THREE.BufferAttribute(mistPos, 3));
+    mistGeo.setAttribute('color', new THREE.BufferAttribute(mistCol, 3));
+    boxes.forEach((b, i) => { mistPos[i * 3] = b.x + b.w / 2; mistPos[i * 3 + 1] = b.y + b.h * 1.25; });
+    const mistObj = new THREE.Points(mistGeo, new THREE.PointsMaterial({
+      map: haloTexture(), vertexColors: true, transparent: true, depthWrite: false,
+      blending: THREE.AdditiveBlending, size: Math.max(160, boxes[0].w * 3.2), sizeAttenuation: false,
+    }));
+    mistObj.frustumCulled = false; mistObj.renderOrder = -7;
+
     group.clear();
-    group.add(lines, dotObj);
-    castle = { segs, dots, linePos, lineCol, lineGeo, dotPos, dotCol, dotGeo, dotObj, boxes };
+    group.add(mistObj, fillMesh, lines, dotObj);
+    castle = {
+      segs, dots, linePos, lineCol, lineGeo, dotPos, dotCol, dotGeo, dotObj, boxes,
+      rects, tris, fillPos, fillCol, fillGeo, fillMat, mistCol, mistGeo,
+    };
   }
 
   // Dibuja el castillo con progreso p (0..1), brillo global g y tiempo s (para el ondeo).
@@ -225,6 +272,49 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
     c.lineGeo.attributes.position.needsUpdate = true;
     c.lineGeo.attributes.color.needsUpdate = true;
     c.dotGeo.attributes.color.needsUpdate = true;
+
+    // Siluetas rellenas: cada rectángulo crece de su base a su tope según el progreso.
+    const top = F.castleTop, bot = F.castleBottom;
+    let v = 0;
+    // Los colores de config están pensados como se ven (sRGB); el material los trata como
+    // lineales y los aclararía, así que se convierten.
+    const lin = (q) => Math.max(0, q) ** 2.2;
+    const put = (x, y, r, g, b) => {
+      c.fillPos[v * 3] = x; c.fillPos[v * 3 + 1] = y; c.fillPos[v * 3 + 2] = 0;
+      c.fillCol[v * 3] = lin(r); c.fillCol[v * 3 + 1] = lin(g); c.fillCol[v * 3 + 2] = lin(b);
+      v++;
+    };
+    for (const r of c.rects) {
+      const u = ease((p - r.ta) / Math.max(0.001, r.tb - r.ta));
+      const yt = r.yb + (r.yt - r.yb) * u;
+      if (r.k === 'window') { // ventana encendida: dorado cálido, con un leve parpadeo
+        const tw = 0.85 + 0.15 * Math.sin(s * 1.7 + r.x0);
+        const cr = 1.0 * tw * u, cg = 0.80 * tw * u, cb = 0.42 * tw * u;
+        put(r.x0, r.yb, cr, cg, cb); put(r.x1, r.yb, cr, cg, cb); put(r.x1, yt, cr, cg, cb);
+        put(r.x0, r.yb, cr, cg, cb); put(r.x1, yt, cr, cg, cb); put(r.x0, yt, cr, cg, cb);
+        continue;
+      }
+      // Abajo calor de las letras; arriba violeta profundo (la silueta se funde con el cielo).
+      put(r.x0, r.yb, bot[0], bot[1], bot[2]); put(r.x1, r.yb, bot[0], bot[1], bot[2]); put(r.x1, yt, top[0], top[1], top[2]);
+      put(r.x0, r.yb, bot[0], bot[1], bot[2]); put(r.x1, yt, top[0], top[1], top[2]); put(r.x0, yt, top[0], top[1], top[2]);
+    }
+    for (const t of c.tris) {
+      const u = ease((p - t.ta) / Math.max(0.001, t.tb - t.ta));
+      const [a, b, d] = t.pts;
+      const w = Math.sin(s * 3 + t.ph) * 3;       // el banderín ondea
+      const f = (q, dy = 0) => [a[0] + (q[0] - a[0]) * u, a[1] + (q[1] - a[1]) * u + dy];
+      const A = f(a), B = f(b, w), D = f(d, w * 0.5);
+      put(A[0], A[1], 0.78, 0.30, 0.46); put(B[0], B[1], 1.0, 0.72, 0.38); put(D[0], D[1], 0.62, 0.22, 0.40);
+    }
+    c.fillGeo.attributes.position.needsUpdate = true;
+    c.fillGeo.attributes.color.needsUpdate = true;
+    c.fillMat.opacity = F.castleFill * Math.min(1, g);
+    // Niebla al pie: sube con la revelación y respira.
+    const mAmt = F.castleMist * smooth(0.5, 1, p) * Math.min(1, g) * (0.85 + 0.15 * Math.sin(s * 0.9));
+    for (let i = 0; i < c.boxes.length; i++) {
+      c.mistCol[i * 3] = 0.9 * mAmt; c.mistCol[i * 3 + 1] = 0.5 * mAmt; c.mistCol[i * 3 + 2] = 0.35 * mAmt;
+    }
+    c.mistGeo.attributes.color.needsUpdate = true;
   }
 
   function reset(now) {

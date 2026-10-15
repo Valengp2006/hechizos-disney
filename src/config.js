@@ -110,7 +110,7 @@ export const CONFIG = {
     shading: 0.5,             // contraste de luz y sombra del relleno (0 = plano)
     grain: 0.22,              // grano de papel del relleno (0 = liso)
     rim: 0.55,                // brillo del borde superior-izquierdo
-    aura: 0.28,               // resplandor cálido detrás de la letra despierta
+    aura: 0.16,               // resplandor cálido detrás de la letra despierta
     dotFade: 0.75,            // cuánto se atenúa el borde de puntos cuando la letra está rellena (0..1)
     ambient: 0.35,            // brillo del objeto lejos del cursor (0 = invisible, 1 = siempre pleno)
     lightRadius: 300,         // alcance (px) de la luz del cursor sobre los objetos
@@ -399,6 +399,12 @@ export const CONFIG = {
     towerCrown: { D: 'crenels', I: 'mast', S: 'crenels', N: 'mast', E: 'crenels', Y: 'mast' },
     wallHeight: 0.30,         // altura del muro que une las torres (fracción del alto de letra)
     castleLift: 0.6,          // ascenso suave del polvo de la pantalla durante el reposo (0..1)
+    // Aspecto pintado del castillo: siluetas rellenas (violeta profundo, con calor desde abajo por
+    // la luz de las letras), ventanas encendidas y niebla al pie.
+    castleFill: 0.92,         // opacidad de las siluetas (0 = solo línea fina)
+    castleTop: [0.10, 0.07, 0.24],     // color de la silueta arriba (RGB 0..1)
+    castleBottom: [0.34, 0.18, 0.30],  // color de la silueta abajo, tocada por la luz de las letras
+    castleMist: 0.10,         // niebla cálida al pie del castillo (0 = ninguna)
     castleWarmth: 0.5,        // cuánto se dora ese polvo (0..1)
   },
 };
