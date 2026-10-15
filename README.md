@@ -32,6 +32,10 @@ Pantalla casi negra y un punto de luz que sigue al cursor. Las letras no se ven:
 - La **chispa del relámpago de la N** pasa el relevo a la **siguiente letra de la palabra** (N → E) y la enciende un instante (en la E, destellan sus haces); si ya está despierta, la hace saltar.
 - La luz del portal avisa a las letras vecinas, y cuando una letra despierta todas las despiertas parpadean juntas.
 
+**Letras-objeto:** al despertar, cada letra se rellena y se convierte en su objeto, con color propio, iluminado por el cursor sobre la oscuridad (lejos de él queda en penumbra): **D** campana, **I** vela, **S** cinta, **N** estrella, **E** arpa, **Y** flor sobre tallo. Siguen leyéndose como letras y forman la palabra DISNEY.
+
+**Mini-tutorial:** tras el cuento, cada letra (en el orden de la palabra) muestra su objeto y dibuja su gesto con luz, ~2 s cada una. Un clic lo salta; en dev, la tecla `T` lo lanza.
+
 Cuando las seis despiertan, convergen en DISNEY, hay un silencio y aparece un castillo genérico hecho con las propias letras. Tras 30 s sin interacción, todo vuelve a la oscuridad.
 
 ## Teclas

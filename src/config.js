@@ -33,6 +33,33 @@ export const CONFIG = {
     periodMs: 3200,           // lo que tarda el trazo de luz en recorrer el gesto
   },
 
+  // ---------- Letras-objeto ----------
+  // Al despertar, cada letra se rellena y se convierte en su objeto, con color propio,
+  // iluminado por el cursor sobre la oscuridad. El objeto sale del propio relleno de la letra
+  // más unos pocos detalles (asa, llama, sol...), así la letra sigue leyéndose.
+  icons: {
+    enabled: true,
+    ambient: 0.35,            // brillo del objeto lejos del cursor (0 = invisible, 1 = siempre pleno)
+    lightRadius: 300,         // alcance (px) de la luz del cursor sobre los objetos
+    fadeSpeed: 5,             // qué tan rápido se rellena la letra al despertar
+    colors: {
+      D: '#e0883a',           // campana (cobre)
+      I: '#f5e8c8',           // vela (cera)
+      S: '#f2848d',           // cinta
+      N: '#f4c95d',           // estrella
+      E: '#e9b44c',           // arpa
+      Y: '#5fbf7a',           // flor sobre tallo
+    },
+  },
+
+  // ---------- Mini-tutorial (tras el cuento) ----------
+  // Cada letra, en el orden de la palabra, muestra su objeto y dibuja su gesto con luz.
+  tutorial: {
+    enabled: true,
+    enabledInDev: false,      // en dev se salta (salvo ?intro); la tecla T lo lanza
+    slotMs: 2300,             // cuánto se queda cada letra (6 letras)
+  },
+
   // ---------- Modo ----------
   mode: {
     // Modo con el que arranca: 'performance' (público) o 'dev' (depuración).

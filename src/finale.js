@@ -244,6 +244,8 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
     lastX = input.x; lastY = input.y;
     lift = 0; warmth = 0;
     const s = now / 1000;
+    // En el final los objetos quedan plenamente iluminados (no dependen del cursor).
+    letters.letters.forEach((l) => { l.alwaysLit = phase !== 'play'; });
 
     switch (phase) {
       case 'play':

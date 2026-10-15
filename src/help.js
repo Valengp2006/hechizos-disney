@@ -39,8 +39,11 @@ export function createHelp({ scene }) {
   scene.add(obj);
 
   let level = 0; // 0..1 suavizado: aparece y se va con calma
+  let lastLetter = null;
 
   function update(now, dtMs, letter, show) {
+    // Al cambiar de letra el pictograma reaparece desde cero (no "salta" de una a otra).
+    if (letter !== lastLetter) { level = 0; lastLetter = letter; }
     level += ((show && letter ? 1 : 0) - level) * Math.min(1, (dtMs / 1000) * 3);
     if (level < 0.01 || !letter) { obj.visible = false; return; }
     obj.visible = true;

@@ -14,6 +14,7 @@ import { CONFIG } from './config.js';
 import { letterShape } from './font.js';
 import { haloTexture, rgb } from './render.js';
 import { rng } from './dust.js';
+import { createIcon } from './icons.js';
 import { createPortal } from './spells/d.js';
 import { createGravity } from './spells/i.js';
 import { createRibbon } from './spells/s.js';
@@ -126,6 +127,14 @@ class Letter {
     this.debug.visible = false;
     this.body.add(this.debug);
 
+    // Objeto en que se convierte la letra al despertar (campana, vela, cinta...).
+    this.icon = CONFIG.icons.enabled ? createIcon(this) : null;
+    if (this.icon) this.body.add(this.icon.group); // dentro de `body`: se estira con la letra
+    this.fillOp = 0;        // 0..1: cuánto está rellena la letra
+    this.preview = 0;       // 0..1: vista previa del objeto (mini-tutorial)
+    this.alwaysLit = false; // el final la deja siempre iluminada
+    this.cursor = null;     // {x, y} del cursor, lo pone el reparto cada frame
+
     // Hechizo propio de la letra (si existe). Se crea una vez; solo se anima.
     this.spell = SPELLS[char] ? SPELLS[char](this) : null;
     if (this.spell?.anchor) {
@@ -170,7 +179,7 @@ class Letter {
   // `trail` es el trazo del gesto (px de pantalla): algunos hechizos lo usan (p. ej. la cinta).
   conjure(trail, info) { this.set(STATE.CONJURED); this.spell?.start?.(trail, info); }
   awaken() { this.set(STATE.AWAKE); }
-  reset() { this.set(STATE.LATENT); this.spell?.reset(); this.reached.clear(); }
+  reset() { this.set(STATE.LATENT); this.spell?.reset(); this.reached.clear(); this.fillOp = 0; this.preview = 0; }
   // Contagio: una letra despierta da un saltito; una dormida se aviva un instante.
   cheer() { this.cheerT = 0; }
   excite() { this.exciteT = 0; }
@@ -267,6 +276,23 @@ class Letter {
       tremble = Math.max(tremble, L.trembleAmplitude * exciteP);
     }
     this.setStretch(stretch);
+    // Objeto: se rellena al despertar y se ilumina según la cercanía del cursor.
+    if (this.icon) {
+      const I = CONFIG.icons;
+      let fillTarget = 0;
+      if (this.state === STATE.AWAKE) fillTarget = 1;
+      else if (this.state === STATE.CONJURED) fillTarget = Math.min(1, Math.max(0, (this.progress - 0.55) / 0.45));
+      fillTarget = Math.max(fillTarget, this.preview);
+      this.fillOp += (fillTarget - this.fillOp) * Math.min(1, (dtMs / 1000) * I.fadeSpeed);
+      let light = I.ambient;
+      if (this.cursor) {
+        const f = Math.max(0, 1 - this.distanceTo(this.cursor.x, this.cursor.y) / I.lightRadius);
+        light += (1 - I.ambient) * f ** 1.5;
+      }
+      if (this.state === STATE.CONJURED || this.alwaysLit || this.preview > 0) light = Math.max(light, 0.9);
+      light = Math.max(light, cheerP);
+      this.icon.update(this.fillOp, light, timeS);
+    }
     // Letras con destello por contagio (E): sus haces se asoman aunque duerman.
     if (this.spell?.flare && this.state !== STATE.CONJURED && this.state !== STATE.AWAKE) {
       this.spell.flare(exciteP, timeS);
@@ -378,6 +404,7 @@ export function createLetters(font) {
         ? Math.min(1, l.chargeLevel + dtMs / CONFIG.spells.chargeMs)
         : Math.max(0, l.chargeLevel - dtMs / 200);
       l.gestureProgress = l === target ? (progress[l.gesture] || 0) : 0;
+      l.cursor = input.active ? { x: input.x, y: input.y } : null;
       l.update(dtMs, timeS, l === target);
     }
     chains();

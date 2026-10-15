@@ -128,7 +128,10 @@ export function createPortal(letter) {
   // Letra despierta: el portal ya se cerró; solo gira la copia pequeña.
   function awake(ms, breath) {
     copies.forEach((c) => { c.g.visible = false; c.lineMat.opacity = 0; c.pointMat.opacity = 0; });
-    remnant.g.visible = true;
+    // Con la letra-objeto activa la D ya es una campana: la copia que gira sobraría.
+    remnant.g.visible = !CONFIG.icons.enabled;
+    remnant.g.position.set(vp.x, vp.y, 0);       // por si se despertó sin conjurar (dev)
+    remnant.g.scale.setScalar(cfg.portalRemnantScale);
     remnant.g.rotation.z = ((ms + cfg.durationMs.D) / 1000) * spin;
     const op = 0.55 + 0.35 * breath;
     remnant.lineMat.opacity = op;
