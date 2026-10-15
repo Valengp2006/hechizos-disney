@@ -10,7 +10,7 @@ import { haloTexture, rgb } from './render.js';
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 const ease = (v) => { const t = clamp01(v); return t * t * (3 - 2 * t); };
 
-export function createIntro({ scene, font }) {
+export function createIntro({ scene, font, onLine = () => {} }) {
   const I = CONFIG.intro;
   const group = new THREE.Group();
   scene.add(group);
@@ -21,6 +21,7 @@ export function createIntro({ scene, font }) {
   let builtFor = '';
   let t0 = 0;
   let done = true;
+  let lastLine = -1;   // última línea cuyo inicio ya se avisó (para su sonido)
 
   // Pluma de luz: un halo que sigue el frente de la escritura.
   const penGeo = new THREE.BufferGeometry();
@@ -80,7 +81,7 @@ export function createIntro({ scene, font }) {
   const lineSpan = () => I.writeMs + I.holdMs + I.fadeMs + I.gapMs;
   const total = () => I.startDelayMs + I.lines.length * lineSpan();
 
-  function restart(now) { t0 = now; done = false; }
+  function restart(now) { t0 = now; done = false; lastLine = -1; }
   function skip() { done = true; group.visible = false; pen.material.opacity = 0; }
 
   function update(now) {
@@ -95,6 +96,7 @@ export function createIntro({ scene, font }) {
     lines.forEach((ln, i) => {
       const lt = t - I.startDelayMs - i * lineSpan();
       let p = 0, mult = 0;
+      if (lt >= 0 && i > lastLine) { lastLine = i; onLine(i, lines.length); }
       if (lt >= 0 && lt < I.writeMs + I.holdMs + I.fadeMs) {
         p = ease(lt / I.writeMs);
         mult = lt < I.writeMs + I.holdMs ? 1 : 1 - (lt - I.writeMs - I.holdMs) / I.fadeMs;

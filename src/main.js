@@ -125,7 +125,7 @@ loadFont().then((font) => {
     scene, letters,
     onReset: (now) => { lastSuccessAt = now; startIntro(now); },
   });
-  intro = createIntro({ scene, font });
+  intro = createIntro({ scene, font, onLine: (i, n) => sfx.story(i, n) });
   help = createHelp({ scene });
   tutorial = createTutorial({ letters });
   guide = createGuide({ letters });

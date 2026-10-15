@@ -18,6 +18,6 @@ Del material de marca solo se toma el lenguaje (luz, polvo, brillo, calidez). No
 
 ## Música y sonido
 - **Sonido mágico sintetizado** (sin archivo): `src/audio.js`. Celesta/caja de música con eco, notas de la pentatónica de Re mayor; D-I-S-N-E-Y = Re Mi Fa# La Si Re, así que despertar las letras en el orden de la palabra forma una escala ascendente.
-- **Loop de música** (archivo, opcional): `public/audio/loop.mp3`. Pendiente. Anotar aquí título, autor, licencia y enlace.
+- **Loop de música** (archivo, opcional): apagado por ahora (`audio.music: false`). `public/audio/loop.mp3`. Pendiente. Anotar aquí título, autor, licencia y enlace.
   - Buscar: "music box", "celesta", "glockenspiel", "harp", "fairy dust", "ambient shimmer pad". Tono Re mayor o pentatónica, 70–90 bpm, 1–2 min, sin percusión, que cierre sin cortes.
   - Fuentes con licencia clara: Pixabay Music, Free Music Archive, YouTube Audio Library, Incompetech (CC BY: hay que acreditar).

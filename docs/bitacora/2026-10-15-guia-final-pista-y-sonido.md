@@ -29,3 +29,7 @@
 ## A observar con personas
 - ¿El sonido ayuda a descubrir (se nota cuándo vas bien) o distrae?
 - ¿La escala ascendente al despertar en orden se percibe?
+
+## Ajuste posterior (2026-10-15)
+- **Sonido del cuento:** una nota por línea, cada vez más aguda (Re, Fa#, Si), con un destello al cerrar la última (`sfx.story`). Solo suena si el audio ya está encendido (un gesto previo o Chrome con `--autoplay-policy=no-user-gesture-required`).
+- **Música en loop apagada por ahora** (`audio.music: false`): ya no se pide `loop.mp3` (desaparece el aviso 404) y suenan solo los sonidos mágicos. El código del loop queda por si se retoma.

@@ -145,8 +145,9 @@ export const CONFIG = {
 
   // ---------- Audio ----------
   audio: {
-    // Loop de fondo (archivo propio o de licencia libre). Si no existe, el sistema
-    // funciona en silencio y avisa por consola.
+    // Música en loop (archivo propio o de licencia libre). Desactivada por ahora: suenan solo los
+    // sonidos mágicos de `sfx`. Para volver a usarla: music: true y poner el archivo en `url`.
+    music: false,
     url: 'audio/loop.mp3',
     // Volumen maestro 0..1. Es el único control de nivel de todo el sistema.
     volume: 0.6,

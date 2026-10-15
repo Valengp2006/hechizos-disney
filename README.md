@@ -55,7 +55,7 @@ npm run dev                    # http://localhost:5173
 npm run build                  # dist/ para GitHub Pages (se despliega solo al hacer push a main)
 ```
 
-**Sonido:** necesita un primer gesto (clic, toque o tecla) para encenderse; en una exhibición sin clic, abrir Chrome con `--autoplay-policy=no-user-gesture-required`. Sin archivo de música suena igual: hay una capa mágica sintetizada (`audio.sfx` en `config.js`).
+**Sonido:** necesita un primer gesto (clic, toque o tecla) para encenderse; en una exhibición sin clic, abrir Chrome con `--autoplay-policy=no-user-gesture-required`. La música en loop está apagada por ahora (`audio.music`); suena la capa mágica sintetizada (`audio.sfx` en `config.js`), que incluye una nota por cada línea del cuento.
 
 La cámara requiere HTTPS (o `localhost`); hoy no se usa. No se guarda ni transmite nada de ella.
 

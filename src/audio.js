@@ -1,7 +1,7 @@
 // audio.js — el sonido del sistema, con Web Audio y sin dependencias.
 //
 // Dos capas independientes:
-//   1. MÚSICA: un loop de archivo (audio.url), opcional. Si no existe, el sistema suena igual.
+//   1. MÚSICA: un loop de archivo (audio.url), opcional y apagado por ahora (audio.music).
 //   2. SONIDO MÁGICO (sfx): sintetizado en vivo, para que suene a celesta / caja de música con
 //      eco sin necesitar archivos. Cada letra tiene una nota de la pentatónica de Re mayor, en el
 //      orden de la palabra (D-I-S-N-E-Y = Re Mi Fa# La Si Re): al despertar las letras en ese
@@ -130,6 +130,7 @@ async function start() {
   // Primera señal: un destello suave para que se sepa que el sonido está encendido.
   if (CONFIG.audio.sfx.enabled) arp([SCALE[3], SCALE[5], SCALE[7]], ctx.currentTime + 0.05, 0.12, 2.2, 0.28);
 
+  if (!CONFIG.audio.music) return; // música en loop apagada: solo la capa de sonidos mágicos
   musicGain = ctx.createGain();
   musicGain.gain.value = 0;
   musicGain.connect(ctx.destination);
@@ -214,6 +215,16 @@ export const sfx = {
   cheer() {
     if (!ok()) return;
     arp([SCALE[4] * 2, SCALE[6] * 2], ctx.currentTime, 0.06, 0.7, 0.14);
+  },
+  // Inicio de cuento: cada línea que se escribe suena como una nota que sube; la última
+  // cierra con un destello. `i` es el índice de la línea, `n` cuántas hay.
+  story(i, n) {
+    if (!ok()) return;
+    const t = ctx.currentTime;
+    const f = SCALE[Math.min(SCALE.length - 1, i * 2)] ;
+    bell(f, t, 2.6, 0.34);
+    bell(f * 2, t + 0.05, 1.8, 0.14);
+    if (i === n - 1) arp([SCALE[4], SCALE[5], SCALE[7]], t + 0.5, 0.14, 2.4, 0.22);
   },
   // Final: las letras convergen (barrido ascendente), se revela (acorde pleno) y reposa.
   converge() {
