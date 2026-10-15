@@ -39,16 +39,17 @@ const FRAG = `
     vec2 uv = vUv;
     float asp = uRes.x / uRes.y;
     float y = uv.y;                               // 0 abajo, 1 arriba
-    vec3 top = vec3(0.030, 0.035, 0.115);
-    vec3 mid = vec3(0.095, 0.058, 0.190);
-    vec3 low = vec3(0.205, 0.092, 0.205);
+    // Azul real de cuento: marino arriba, azul profundo en medio y un azul-violeta cálido abajo.
+    vec3 top = vec3(0.012, 0.030, 0.120);
+    vec3 mid = vec3(0.035, 0.085, 0.290);
+    vec3 low = vec3(0.110, 0.140, 0.400);
     vec3 col = mix(low, mid, smoothstep(0.0, 0.55, y));
     col = mix(col, top, smoothstep(0.45, 1.0, y));
 
     // Resplandor cálido del horizonte, un poco a un lado para que no sea simétrico.
     float gx = (uv.x - 0.42) * 1.25;
     float glow = exp(-gx * gx * 3.0) * exp(-pow(y * 2.4, 2.0));
-    col += vec3(0.42, 0.20, 0.08) * glow * 0.55;
+    col += vec3(0.50, 0.30, 0.14) * glow * 0.50;   // calor dorado: el contraste del azul
 
     // Niebla en dos capas que se desplazan a distinta velocidad.
     vec2 p1 = vec2(uv.x * asp, uv.y) * 2.1 + vec2(uTime * 0.010, uTime * 0.003);
@@ -58,7 +59,7 @@ const FRAG = `
     float dc = length((uv - uCursor) * vec2(asp, 1.0));
     m *= 1.0 - uCursorOn * 0.75 * (1.0 - smoothstep(0.0, 0.26, dc));
     col += vec3(0.34, 0.20, 0.10) * exp(-dc * dc * 16.0) * 0.16 * uCursorOn;
-    vec3 mistCol = mix(vec3(0.17, 0.11, 0.33), vec3(0.50, 0.28, 0.42), 1.0 - y);
+    vec3 mistCol = mix(vec3(0.10, 0.17, 0.42), vec3(0.34, 0.36, 0.64), 1.0 - y);
     col += mistCol * m * uMist * (0.30 + 0.70 * (1.0 - y));
 
     // Viñeta suave para llevar la mirada al centro.
@@ -101,7 +102,7 @@ export function createBackdrop(scene) {
   }));
   stars.frustumCulled = false; stars.renderOrder = -900;
   group.add(stars);
-  const cool = rgb([190, 205, 255]), warm = rgb([255, 226, 170]);
+  const cool = rgb([170, 200, 255]), warm = rgb([255, 226, 170]);
   const tmp = new THREE.Color();
   const sx = new Float32Array(N), sy = new Float32Array(N), sph = new Float32Array(N), sfr = new Float32Array(N), stone = new Float32Array(N);
   for (let i = 0; i < N; i++) {

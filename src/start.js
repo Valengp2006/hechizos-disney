@@ -12,14 +12,14 @@ export function createStartMenu({ onStart }) {
   face.textContent = `
     @font-face{font-family:'CinzelStart';src:url('${import.meta.env.BASE_URL}fonts/Cinzel-Bold.woff') format('woff');font-weight:700}
     #start{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;
-      justify-content:center;gap:22px;background:rgba(4,3,10,.62);cursor:pointer;
+      justify-content:center;gap:22px;background:rgba(3,6,24,.66);cursor:pointer;
       opacity:0;transition:opacity .6s ease;user-select:none;-webkit-user-select:none}
     #start.on{opacity:1}
     #start .eyebrow{font:700 clamp(13px,1.6vw,18px) 'CinzelStart',serif;letter-spacing:.32em;
       color:#e9b44c;text-transform:uppercase;opacity:.9}
     #start .btn{font:700 clamp(20px,3vw,34px) 'CinzelStart',serif;letter-spacing:.12em;color:#fff1b0;
       padding:.7em 1.6em;border:1.5px solid rgba(233,180,76,.8);border-radius:999px;
-      background:rgba(11,8,22,.5);box-shadow:0 0 28px rgba(233,180,76,.35),inset 0 0 18px rgba(233,180,76,.15);
+      background:rgba(6,12,44,.55);box-shadow:0 0 28px rgba(233,180,76,.35),inset 0 0 18px rgba(233,180,76,.15);
       animation:startGlow 2.6s ease-in-out infinite}
     #start:hover .btn{box-shadow:0 0 46px rgba(255,214,120,.6),inset 0 0 24px rgba(233,180,76,.3)}
     #start .hint{font:400 clamp(12px,1.4vw,16px) system-ui,sans-serif;color:#cfc7e6;opacity:.85}

@@ -502,16 +502,25 @@ export function createLetters(font) {
       const recent = trail.filter((p) => p.t >= tEnd - CONFIG.letters.gestureTargetMs);
       pts = recent.length ? recent : trail;
     }
-    let l = null, bestD = CONFIG.letters.sensitiveRadius;
+    // Candidatas: letras (latentes/sensibles) a menos de `sensitiveRadius` del final del trazo.
+    // Si alguna tiene justo el gesto que se hizo, gana la más cercana de ESAS (así un barrido
+    // junto a dos letras abre la S y no la vecina); si ninguna lo tiene, la más cercana escucha.
+    let l = null, bestD = CONFIG.letters.sensitiveRadius, matchD = Infinity;
     const dists = [];
+    let match = null;
     for (const c of letters) {
       if (c.state !== STATE.LATENT && c.state !== STATE.SENSITIVE) continue;
       let d = Infinity;
       for (let i = 0; i < pts.length; i += 3) d = Math.min(d, c.distanceTo(pts[i].x, pts[i].y));
       d = Math.min(d, c.distanceTo(pts[pts.length - 1].x, pts[pts.length - 1].y));
       dists.push(`${c.char}:${Math.round(d)}`);
-      if (d <= bestD) { l = c; bestD = d; }
+      if (d < bestD || (d === bestD && l === null)) { l = c; bestD = d; }
+      // La preferencia por la letra "que corresponde" se mide donde termina el gesto, no en todo
+      // el recorrido (si no, un gesto hecho lejos se asignaría a una letra por la que se pasó).
+      const dEnd = c.distanceTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+      if (c.gesture === name && dEnd <= CONFIG.letters.sensitiveRadius && dEnd < matchD) { match = c; matchD = dEnd; }
     }
+    if (match) l = match;
     const x = pts[pts.length - 1].x, y = pts[pts.length - 1].y;
     const dbg = { x, y, n: pts.length, dists: dists.join(' ') };
     if (!l) return null;

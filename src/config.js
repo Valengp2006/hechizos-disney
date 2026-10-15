@@ -119,10 +119,10 @@ export const CONFIG = {
     colors: {
       D: '#e0883a',           // campana (cobre)
       I: '#f5e8c8',           // vela (cera)
-      S: '#f2848d',           // cinta
-      N: '#f4c95d',           // estrella
+      S: '#4f86e8',           // cinta (azul real)
+      N: '#a9c8ff',           // estrella (azul hielo)
       E: '#e9b44c',           // arpa
-      Y: '#5fbf7a',           // flor sobre tallo
+      Y: '#3fb6a6',           // flor sobre tallo (verde-azulado)
     },
   },
 
@@ -210,7 +210,7 @@ export const CONFIG = {
   // ---------- Visual ----------
   visual: {
     // Fondo casi negro azulado: la oscuridad es parte del asombro.
-    background: [4, 3, 10],
+    background: [3, 6, 20],
     // Cantidad de partículas de polvo ambiental. Más = más "atmósfera" y más costo de render.
     dustCount: 400,
     // Colores por estado de la letra (RGB).
@@ -281,6 +281,7 @@ export const CONFIG = {
     zigzag: {
       minSignChanges: 3,      // cambios de sentido (en x o en y) para contar como "agitar"
       minAmplitude: 30,       // amplitud mínima de cada vaivén (px)
+      minPathRatio: 2.2,      // recorrido total / desplazamiento neto: agitar es moverse "en el sitio"
     },
     still: {
       speedThreshold: 12,     // velocidad (px/s) por debajo de la cual está quieto
@@ -403,14 +404,14 @@ export const CONFIG = {
     // Aspecto pintado del castillo: siluetas rellenas (violeta profundo, con calor desde abajo por
     // la luz de las letras), ventanas encendidas y niebla al pie.
     castleFill: 0.92,         // opacidad de las siluetas (0 = solo línea fina)
-    castleTop: [0.10, 0.07, 0.24],     // color de la silueta arriba (RGB 0..1)
-    castleBottom: [0.34, 0.18, 0.30],  // color de la silueta abajo, tocada por la luz de las letras
+    castleTop: [0.035, 0.07, 0.24],    // color de la silueta arriba (RGB 0..1): azul profundo
+    castleBottom: [0.20, 0.22, 0.48],  // color de la silueta abajo, tocada por la luz de las letras
     castleMist: 0.10,         // niebla cálida al pie del castillo (0 = ninguna)
     // Capa lejana (profundidad): colinas y torres pequeñas, más claras y neblinosas, detrás del castillo.
     farLayer: true,
     farFill: 0.75,            // opacidad de la capa lejana
-    farTop: [0.20, 0.15, 0.36],        // color arriba
-    farBottom: [0.36, 0.21, 0.38],     // color abajo (más cálido, hundido en la niebla)
+    farTop: [0.10, 0.19, 0.44],        // color arriba
+    farBottom: [0.24, 0.30, 0.56],     // color abajo (más claro, hundido en la niebla)
     castleWarmth: 0.5,        // cuánto se dora ese polvo (0..1)
   },
 };

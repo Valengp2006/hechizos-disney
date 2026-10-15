@@ -97,7 +97,13 @@ function measureZigzag(pts, cfg) {
   const cx = reversals(pts.map((p) => p.x), amp);
   const cy = reversals(pts.map((p) => p.y), amp);
   const changes = Math.max(cx, cy);
-  return { changes, pass: changes >= cfg.zigzag.minSignChanges };
+  // Agitar es moverse "en el sitio": el recorrido total es mucho mayor que el desplazamiento
+  // neto. Un barrido o un subir con vaivén avanzan hacia algún lado y no cuentan.
+  let path = 0;
+  for (let i = 1; i < pts.length; i++) path += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+  const net = pts.length > 1 ? Math.hypot(pts[pts.length - 1].x - pts[0].x, pts[pts.length - 1].y - pts[0].y) : 0;
+  const inPlace = net < 2 * amp || path / Math.max(1, net) >= cfg.zigzag.minPathRatio;
+  return { changes, inPlace, pass: changes >= cfg.zigzag.minSignChanges && inPlace };
 }
 
 export function createRecognizer(cfg = CONFIG.gestures) {
@@ -204,7 +210,9 @@ export function createRecognizer(cfg = CONFIG.gestures) {
 
     // Prioridad: acciones deliberadas primero; entre trazos, el más específico primero
     // (círculo antes que zigzag, porque un círculo también invierte la dirección en x).
-    const order = ['grab', 'still', 'circle', 'zigzag', 'sweep', 'rise'];
+    // Los trazos rectos (barrido, subir) van antes que agitar: exigen ir recto, así que un
+    // barrido con vaivén no se confunde con una sacudida, y una sacudida no pasa por recta.
+    const order = ['grab', 'still', 'circle', 'sweep', 'rise', 'zigzag'];
     for (const name of order) {
       if (report[name].pass) {
         fire(name, now);

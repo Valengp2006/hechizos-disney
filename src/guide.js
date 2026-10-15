@@ -12,10 +12,10 @@ import { CONFIG } from './config.js';
 const ICONS = {
   D: '<path d="M10 14c0-9 18-9 20 0" fill="none" stroke="#f6d27a" stroke-width="2.5"/><path d="M10 14h14c12 0 18 8 18 16s-6 16-18 16H10z" fill="#e0883a"/><path d="M17 20h7c7 0 11 4 11 10s-4 10-11 10h-7z" fill="#0b0816"/><circle cx="26" cy="33" r="3.4" fill="#f6d27a"/>',
   I: '<path d="M24 3c5 6 5 11 0 14-5-3-5-8 0-14z" fill="#ffb347"/><rect x="19" y="18" width="10" height="22" rx="2" fill="#f5e8c8"/><rect x="13" y="39" width="22" height="5" rx="2" fill="#e9b44c"/>',
-  S: '<path d="M35 11c-4-6-22-5-22 4s22 6 22 17-19 12-23 5" fill="none" stroke="#f2848d" stroke-width="7" stroke-linecap="round"/>',
-  N: '<path d="M11 41V9l26 32V9" fill="none" stroke="#f4c95d" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><path d="M24 15l2.6 7.4L34 25l-7.4 2.6L24 35l-2.6-7.4L14 25l7.4-2.6z" fill="#fff4c4"/>',
+  S: '<path d="M35 11c-4-6-22-5-22 4s22 6 22 17-19 12-23 5" fill="none" stroke="#4f86e8" stroke-width="7" stroke-linecap="round"/>',
+  N: '<path d="M11 41V9l26 32V9" fill="none" stroke="#a9c8ff" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><path d="M24 15l2.6 7.4L34 25l-7.4 2.6L24 35l-2.6-7.4L14 25l7.4-2.6z" fill="#fff4c4"/>',
   E: '<rect x="11" y="10" width="5.5" height="31" rx="2" fill="#e9b44c"/><path d="M11 10c9-7 25-6 30 7" fill="none" stroke="#f6d27a" stroke-width="3"/><path d="M16 17h22M16 25h19M16 33h16" stroke="#f6d27a" stroke-width="2.4" stroke-linecap="round"/>',
-  Y: '<path d="M24 45V28M24 28L12 14M24 28L36 14" fill="none" stroke="#5fbf7a" stroke-width="5" stroke-linecap="round"/><g fill="#f48fb1"><circle cx="24" cy="6" r="4"/><circle cx="29.2" cy="9" r="4"/><circle cx="29.2" cy="15" r="4"/><circle cx="24" cy="18" r="4"/><circle cx="18.8" cy="15" r="4"/><circle cx="18.8" cy="9" r="4"/></g><circle cx="24" cy="12" r="3.4" fill="#ffd25e"/>',
+  Y: '<path d="M24 45V28M24 28L12 14M24 28L36 14" fill="none" stroke="#3fb6a6" stroke-width="5" stroke-linecap="round"/><g fill="#f48fb1"><circle cx="24" cy="6" r="4"/><circle cx="29.2" cy="9" r="4"/><circle cx="29.2" cy="15" r="4"/><circle cx="24" cy="18" r="4"/><circle cx="18.8" cy="15" r="4"/><circle cx="18.8" cy="9" r="4"/></g><circle cx="24" cy="12" r="3.4" fill="#ffd25e"/>',
 };
 
 // Gesto animado (64x64): trazo tenue y un punto de luz que lo recorre.
@@ -49,7 +49,7 @@ export function createGuide({ letters }) {
   style.textContent = `
     #guide{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);width:min(94vw,700px);
       font:13px/1.3 system-ui,-apple-system,Segoe UI,sans-serif;color:#efe9ff;pointer-events:none;
-      background:rgba(11,8,22,.8);border:1px solid rgba(233,180,76,.4);border-radius:12px;
+      background:rgba(5,10,36,.82);border:1px solid rgba(233,180,76,.45);border-radius:12px;
       padding:6px 12px 7px;display:none;box-sizing:border-box;z-index:5}
     #guide .row{display:flex;align-items:center;gap:12px}
     #guide .pic{flex:0 0 46px;height:46px}

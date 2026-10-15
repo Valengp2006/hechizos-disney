@@ -109,10 +109,14 @@ export function createCandleGame(letter) {
       const alive = fl.filter((f) => f.alive).length;
       if (timer <= 0 && alive < 3 && lit + alive < N) {
         // Nacen abajo, alrededor de la base de la vela (posiciones fijas por índice).
+        // Dentro de la zona alcanzable: por encima de la franja de la guía y de los bordes.
+        const Hu = window.innerHeight * (1 - (CONFIG.guide.enabled ? CONFIG.guide.reserve : 0));
+        const yMax = Math.max(h * 1.25, (Hu * 0.93 - letter.pos.y) / sc);
+        const xMin = (28 - letter.pos.x) / sc, xMax = (window.innerWidth - 28 - letter.pos.x) / sc;
         fl.push({
           alive: true, ph: hash(spawned, 3) * TAU,
-          x: (0.5 + (hash(spawned) - 0.5) * 3.4) * w,
-          y: h * (1.5 + hash(spawned, 1) * 0.8),
+          x: Math.min(xMax, Math.max(xMin, (0.5 + (hash(spawned) - 0.5) * 3.4) * w)),
+          y: Math.min(yMax, h * (1.3 + hash(spawned, 1) * 0.8)),
         });
         spawned++; timer = G.spawnMs * (1 - 0.4 * ease);
       }
@@ -128,7 +132,9 @@ export function createCandleGame(letter) {
           f.x += (Math.sin(t * 0.9 + f.ph) * 22 * dt) / sc;
           f.y += (Math.cos(t * 0.7 + f.ph) * 16 * dt) / sc;
         }
-        f.y = Math.min(f.y, h * 2.6);
+        // No se pierden por debajo de la zona alcanzable (la franja de la guía).
+        const Hu2 = window.innerHeight * (1 - (CONFIG.guide.enabled ? CONFIG.guide.reserve : 0));
+        f.y = Math.min(f.y, Math.max(h * 1.25, (Hu2 * 0.93 - letter.pos.y) / sc));
         if (Math.hypot(f.x - wx, f.y - wy) * sc < G.lightPx * (1 + 0.6 * ease) * h * sc) { f.alive = false; lit++; flash = 1; }
       });
       flash *= Math.exp(-dt * 4);
