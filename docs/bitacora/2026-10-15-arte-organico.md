@@ -51,3 +51,6 @@ Un "estilo cuento ilustrado": cielo de crepúsculo pintado, luz cálida, bordes 
 ## A observar con personas
 - ¿Notan que el cielo responde a su luz? ¿Se siente vivo o distrae?
 - ¿La puerta de la D se lee como puerta?
+
+## Composición del final (2026-10-15)
+- El final reservaba la franja de la guía (20 % del alto) aunque la guía ya no se muestra en esa fase: dejaba un tercio inferior vacío. Ahora el castillo y la palabra usan toda la altura (la línea base sube a `finale.wordBaseline`, 0.78).
