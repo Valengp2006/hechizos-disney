@@ -74,22 +74,29 @@ function measureSweep(pts, cfg) {
   };
 }
 
-// Zigzag: cambios de sentido en x. Un cambio solo cuenta si el vaivén previo tuvo al
-// menos `minAmplitude` px (histéresis: el temblor del mouse no suma).
-function measureZigzag(pts, cfg) {
-  const amp = cfg.zigzag.minAmplitude;
-  let ext = pts.length ? pts[0].x : 0, dir = 0, changes = 0;
-  for (const { x } of pts) {
+// Agitar (zigzag): cambios de sentido, en x o en y (se toma el eje con más). Un cambio solo
+// cuenta si el vaivén previo tuvo al menos `minAmplitude` px (histéresis: el temblor del mouse
+// no suma). Aceptar ambos ejes lo hace natural: "sacudir el cursor" en cualquier dirección.
+function reversals(vals, amp) {
+  let ext = vals.length ? vals[0] : 0, dir = 0, changes = 0;
+  for (const v of vals) {
     if (dir === 0) {
-      if (Math.abs(x - ext) >= amp) { dir = Math.sign(x - ext); ext = x; }
+      if (Math.abs(v - ext) >= amp) { dir = Math.sign(v - ext); ext = v; }
     } else if (dir > 0) {
-      if (x > ext) ext = x;
-      else if (ext - x >= amp) { dir = -1; ext = x; changes++; }
+      if (v > ext) ext = v;
+      else if (ext - v >= amp) { dir = -1; ext = v; changes++; }
     } else {
-      if (x < ext) ext = x;
-      else if (x - ext >= amp) { dir = 1; ext = x; changes++; }
+      if (v < ext) ext = v;
+      else if (v - ext >= amp) { dir = 1; ext = v; changes++; }
     }
   }
+  return changes;
+}
+function measureZigzag(pts, cfg) {
+  const amp = cfg.zigzag.minAmplitude;
+  const cx = reversals(pts.map((p) => p.x), amp);
+  const cy = reversals(pts.map((p) => p.y), amp);
+  const changes = Math.max(cx, cy);
   return { changes, pass: changes >= cfg.zigzag.minSignChanges };
 }
 

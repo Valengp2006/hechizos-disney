@@ -385,8 +385,10 @@ export function createLetters(font) {
     screen = { w, h };
     for (const l of letters) {
       const p = CONFIG.letters.layout[l.char];
-      // El tamaño sigue al alto, pero en pantallas estrechas (vertical) se limita por el ancho.
-      l.place(p.x * w, p.y * h, p.size * Math.min(h, w * 0.75));
+      // Se deja libre la franja inferior de la guía. El tamaño sigue al alto útil, pero en
+      // pantallas estrechas (vertical) se limita por el ancho.
+      const Hu = h * (1 - (CONFIG.guide.enabled ? CONFIG.guide.reserve : 0));
+      l.place(p.x * w, p.y * Hu, p.size * Math.min(Hu, w * 0.75));
       l.flashBase = l.flashMat.size;
     }
   }

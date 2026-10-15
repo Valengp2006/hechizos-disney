@@ -63,7 +63,9 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
   }
 
   function startConverge(now) {
-    const W = window.innerWidth, H = window.innerHeight;
+    const W = window.innerWidth;
+    // El castillo se coloca en el alto útil: la franja inferior es de la guía.
+    const H = window.innerHeight * (1 - (CONFIG.guide.enabled ? CONFIG.guide.reserve : 0));
     const targets = wordLayout(W, H);
     moves = letters.letters.map((l, i) => ({
       l,

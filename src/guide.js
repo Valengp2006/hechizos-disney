@@ -1,10 +1,12 @@
 // guide.js — guía siempre visible (HTML sobre el canvas).
-// Una barra al pie con los seis pasos, uno por letra, en el orden de la palabra:
-//   hecho  -> el objeto de la letra, encendido y con una marca
+// Una barra al pie con los seis pasos, uno por letra, en un orden fijo (guide.order) que NO es
+// el de la palabra:
+//   hecho  -> el objeto, encendido, con una marca y la letra ya revelada
 //   actual -> con su gesto animado, qué hacer y una indicación de dónde (la letra late)
-//   por hacer -> el objeto apagado
+//   por hacer -> el objeto apagado y una "?" (la letra no se revela hasta que despierta)
+// Así la guía enseña qué hacer sin adelantar la palabra DISNEY.
 // El paso actual es la letra pendiente más cercana al cursor o, si no hay ninguna cerca,
-// la primera pendiente de la palabra. Al terminar, la barra cuenta lo que pasa en el final.
+// la primera pendiente del orden de la guía. Al terminar, cuenta lo que pasa en el final.
 import { CONFIG } from './config.js';
 
 const ICONS = {
@@ -27,35 +29,45 @@ const PICTO = {
   still: '<circle cx="32" cy="32" r="8" fill="#fff1b0"/><circle cx="32" cy="32" r="14" fill="none" stroke="#f6d27a" stroke-width="3"><animate attributeName="r" values="14;24;14" dur="2.4s" repeatCount="indefinite"/><animate attributeName="stroke-opacity" values=".9;.15;.9" dur="2.4s" repeatCount="indefinite"/></circle>',
   grab: '<circle cx="32" cy="32" r="22" fill="none" stroke="#f6d27a" stroke-width="3"><animate attributeName="r" values="22;7;7;22" keyTimes="0;.5;.7;1" dur="2.6s" repeatCount="indefinite"/></circle><circle cx="32" cy="32" r="5" fill="#fff1b0"/>',
 };
+// Símbolo estático del gesto para las fichas pendientes (no adelanta la forma de la letra).
+const SYMBOL = {
+  circle: '<circle cx="24" cy="24" r="14" fill="none" stroke="#cfc7e6" stroke-width="3.5"/><path d="M24 7l6 7h-12z" fill="#cfc7e6"/>',
+  rise: '<path d="M24 42V8M14 18l10-10 10 10" fill="none" stroke="#cfc7e6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  sweep: '<path d="M6 24h36M32 14l10 10-10 10" fill="none" stroke="#cfc7e6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  zigzag: '<polyline points="6,36 15,12 24,36 33,12 42,36" fill="none" stroke="#cfc7e6" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>',
+  still: '<circle cx="24" cy="24" r="5" fill="#cfc7e6"/><circle cx="24" cy="24" r="14" fill="none" stroke="#cfc7e6" stroke-width="3" stroke-dasharray="3 5"/>',
+  grab: '<circle cx="24" cy="24" r="14" fill="none" stroke="#cfc7e6" stroke-width="3.5"/><circle cx="24" cy="24" r="5" fill="#cfc7e6"/>',
+};
 const GESTURE_KEY = { circle: 'circle', rise: 'rise', sweep: 'sweep', zigzag: 'zigzag', still: 'still', grab: 'grab' };
 
 export function createGuide({ letters }) {
   const G = CONFIG.guide;
-  const word = [...CONFIG.font.word];
+  // Orden de las fichas: guide.order, y al final las letras de la palabra que falten.
+  const word = [...new Set([...G.order, ...CONFIG.font.word])].filter((c) => CONFIG.font.word.includes(c));
 
   const style = document.createElement('style');
   style.textContent = `
-    #guide{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(94vw,780px);
-      font:14px/1.35 system-ui,-apple-system,Segoe UI,sans-serif;color:#efe9ff;pointer-events:none;
-      background:rgba(11,8,22,.82);border:1px solid rgba(233,180,76,.45);border-radius:14px;
-      padding:10px 14px 12px;display:none;box-sizing:border-box;z-index:5}
-    #guide .row{display:flex;align-items:center;gap:14px}
-    #guide .pic{flex:0 0 64px;height:64px}
+    #guide{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);width:min(94vw,700px);
+      font:13px/1.3 system-ui,-apple-system,Segoe UI,sans-serif;color:#efe9ff;pointer-events:none;
+      background:rgba(11,8,22,.8);border:1px solid rgba(233,180,76,.4);border-radius:12px;
+      padding:6px 12px 7px;display:none;box-sizing:border-box;z-index:5}
+    #guide .row{display:flex;align-items:center;gap:12px}
+    #guide .pic{flex:0 0 46px;height:46px}
     #guide .txt{flex:1;min-width:0}
-    #guide .step{font:600 12px/1 system-ui;letter-spacing:.08em;text-transform:uppercase;color:#e9b44c}
-    #guide .big{font:700 20px/1.2 system-ui;margin:3px 0 1px}
-    #guide .small{font-size:13px;color:#cfc7e6}
-    #guide .chips{display:flex;gap:8px;margin-top:10px;justify-content:space-between}
-    #guide .chip{flex:1;text-align:center;border-radius:10px;padding:5px 2px 4px;border:1px solid transparent;opacity:.4;position:relative}
-    #guide .chip svg{width:34px;height:34px;display:block;margin:0 auto;filter:grayscale(1) brightness(.7)}
-    #guide .chip b{display:block;font:700 12px/1.2 system-ui;margin-top:2px}
-    #guide .chip i{display:block;font:normal 11px/1.2 system-ui;color:#cfc7e6}
+    #guide .step{font:600 11px/1 system-ui;letter-spacing:.08em;text-transform:uppercase;color:#e9b44c}
+    #guide .big{font:700 17px/1.2 system-ui;margin:2px 0 0}
+    #guide .small{font-size:12px;color:#cfc7e6}
+    #guide .chips{display:flex;gap:6px;margin-top:6px;justify-content:space-between}
+    #guide .chip{flex:1;text-align:center;border-radius:8px;padding:3px 2px 2px;border:1px solid transparent;opacity:.4;position:relative}
+    #guide .chip svg{width:24px;height:24px;display:block;margin:0 auto;filter:grayscale(1) brightness(.7)}
+    #guide .chip b{display:block;font:700 11px/1.1 system-ui;margin-top:1px}
+    #guide .chip i{display:block;font:normal 10px/1.1 system-ui;color:#cfc7e6}
     #guide .chip.cur{opacity:1;border-color:#e9b44c;background:rgba(233,180,76,.12)}
     #guide .chip.cur svg{filter:none}
     #guide .chip.done{opacity:1}
     #guide .chip.done svg{filter:none}
     #guide .chip.done::after{content:'\\2713';position:absolute;top:1px;right:6px;color:#5fbf7a;font-weight:700}
-    @media (max-width:560px){#guide .big{font-size:17px}#guide .chip i{display:none}}
+    @media (max-width:560px){#guide .big{font-size:15px}#guide .chip i{display:none}}
   `;
   document.head.appendChild(style);
 
@@ -78,7 +90,8 @@ export function createGuide({ letters }) {
     const s = G.steps[ch];
     const el = document.createElement('div');
     el.className = 'chip';
-    el.innerHTML = `<svg viewBox="0 0 48 48" aria-hidden="true">${ICONS[ch] || ''}</svg><b>${ch}</b><i>${s ? s.label : ''}</i>`;
+    // La letra se revela solo al despertar (hasta entonces, "?"): no se adelanta la palabra.
+    el.innerHTML = `<svg viewBox="0 0 48 48" aria-hidden="true">${SYMBOL[CONFIG.letters.gestures[ch]] || ''}</svg><b>?</b><i>${s ? s.label : ''}</i>`;
     chipsEl.appendChild(el);
     return el;
   });
@@ -89,7 +102,8 @@ export function createGuide({ letters }) {
   function update({ current, tutLetter, phase, hidden }) {
     if (!G.enabled || hidden) { root.style.display = 'none'; return null; }
     root.style.display = 'block';
-    const ls = letters.letters;
+    // Las letras en el orden de la guía (no el de la palabra).
+    const ls = word.map((ch) => letters.letters.find((l) => l.char === ch)).filter(Boolean);
     const doneSet = ls.map((l) => l.state === 'awake' || l.state === 'conjured');
     const pending = ls.filter((l, i) => !doneSet[i]);
     const playing = phase === 'play';
@@ -110,6 +124,9 @@ export function createGuide({ letters }) {
       const n = doneSet.filter(Boolean).length;
       chips.forEach((el, i) => {
         el.className = `chip${doneSet[i] ? ' done' : ''}${target && ls[i] === target ? ' cur' : ''}`;
+        el.querySelector('b').textContent = doneSet[i] ? ls[i].char : '?';
+        // Pendiente: símbolo del gesto. Hecha: el objeto (y con él la letra), recién entonces.
+        el.querySelector('svg').innerHTML = doneSet[i] ? (ICONS[ls[i].char] || '') : (SYMBOL[ls[i].gesture] || '');
       });
       if (!playing) {
         pic.innerHTML = '';
@@ -121,7 +138,8 @@ export function createGuide({ letters }) {
       } else if (target) {
         const s = G.steps[target.char];
         pic.innerHTML = PICTO[GESTURE_KEY[target.gesture]] || '';
-        stepEl.textContent = `${n} de ${ls.length} despiertas · ahora ${target.char} (${s.name})`;
+        // Sin nombrar la letra: se habla del objeto (la campana, la vela...).
+        stepEl.textContent = `${n} de ${ls.length} despiertas · ahora: ${s.article} ${s.name}`;
         bigEl.textContent = s.text;
         smallEl.textContent = near ? 'Hazlo aquí, junto a la letra.' : 'Acércate a la letra que late en la oscuridad.';
       }

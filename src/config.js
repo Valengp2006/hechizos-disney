@@ -58,16 +58,20 @@ export const CONFIG = {
   // Decisión consciente: contradice la regla de no explicar con texto; se registra en la bitácora.
   guide: {
     enabled: true,
+    reserve: 0.2,             // fracción del alto reservada abajo para la barra (las letras no la tapan)
     beacon: true,             // la letra del paso actual late (brillo del polvo + fantasma tenue)
     beaconStrength: 0.4,      // cuánto brilla su polvo al latir (0..1)
     beaconGhost: 0.16,        // opacidad máxima del fantasma de la letra al latir
-    steps: {                  // texto de cada paso (orden = font.word)
-      D: { name: 'campana', label: 'círculo', text: 'Dibuja un círculo' },
-      I: { name: 'vela', label: 'subir', text: 'Sube en línea recta' },
-      S: { name: 'cinta', label: 'barrer', text: 'Barre de lado a lado' },
-      N: { name: 'estrella', label: 'zigzag', text: 'Haz un zigzag' },
-      E: { name: 'arpa', label: 'quieto', text: 'Quédate quieto un momento' },
-      Y: { name: 'flor', label: 'agarrar', text: 'Mantén el clic y suelta' },
+    // Orden en que la guía y el mini-tutorial presentan las letras. Es fijo y NO sigue el de la
+    // palabra, para no revelar DISNEY antes de que las letras despierten.
+    order: ['E', 'S', 'D', 'Y', 'I', 'N'],
+    steps: {                  // texto de cada paso
+      D: { article: 'la', name: 'campana', label: 'círculo', text: 'Dibuja un círculo' },
+      I: { article: 'la', name: 'vela', label: 'subir', text: 'Sube en línea recta' },
+      S: { article: 'la', name: 'cinta', label: 'barrer', text: 'Barre de lado a lado' },
+      N: { article: 'la', name: 'estrella', label: 'agitar', text: 'Agita el cursor rápido' },
+      E: { article: 'la', name: 'arpa', label: 'quieto', text: 'Quédate quieto un momento' },
+      Y: { article: 'la', name: 'flor', label: 'agarrar', text: 'Mantén el clic y suelta' },
     },
   },
 
@@ -76,7 +80,7 @@ export const CONFIG = {
   tutorial: {
     enabled: true,
     enabledInDev: false,      // en dev se salta (salvo ?intro); la tecla T lo lanza
-    slotMs: 2300,             // cuánto se queda cada letra (6 letras)
+    slotMs: 2300,             // cuánto se queda cada letra (6 letras); el orden es guide.order
   },
 
   // ---------- Modo ----------
@@ -188,8 +192,8 @@ export const CONFIG = {
       minStraightness: 0.8,   // recorrido neto / ancho del trazo
     },
     zigzag: {
-      minSignChanges: 4,      // cambios de signo de la velocidad horizontal
-      minAmplitude: 40,       // amplitud mínima de cada vaivén (px)
+      minSignChanges: 3,      // cambios de sentido (en x o en y) para contar como "agitar"
+      minAmplitude: 30,       // amplitud mínima de cada vaivén (px)
     },
     still: {
       speedThreshold: 12,     // velocidad (px/s) por debajo de la cual está quieto
