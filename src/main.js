@@ -16,6 +16,7 @@ import { createFinale } from './finale.js';
 import { createIntro } from './intro.js';
 import { createHelp } from './help.js';
 import { createTutorial } from './tutorial.js';
+import { createGuide } from './guide.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -44,6 +45,7 @@ let finale = null;
 let intro = null;
 let help = null;
 let tutorial = null;
+let guide = null;
 let tutorialPending = false;
 let lastSuccessAt = performance.now(); // último acierto (para decidir cuándo ayudar)
 let forceHelp = false;                  // dev: tecla H muestra la ayuda al instante // se crea al cargar la fuente; declarado antes de onModeChange, que llama a syncDebug al registrarse
@@ -122,6 +124,7 @@ loadFont().then((font) => {
   intro = createIntro({ scene, font });
   help = createHelp({ scene });
   tutorial = createTutorial({ letters });
+  guide = createGuide({ letters });
   startIntro(performance.now());
   resize();
   syncDebug();
@@ -157,9 +160,15 @@ renderer.setAnimationLoop(() => {
   // Tras el cuento arranca el mini-tutorial; mientras corre, la ayuda muestra la letra en turno.
   if (tutorialPending && !intro?.active()) { tutorial.start(now); tutorialPending = false; lastSuccessAt = now; }
   const tutLetter = tutorial?.update(now);
-  const stuck = finale?.phase() === 'play' && !intro?.active() && !tutLetter && input.active &&
-    now - lastSuccessAt > CONFIG.help.afterMs;
+  // Con la guía siempre visible, el pictograma en escena por atasco sobra (queda el del tutorial).
+  const stuck = !CONFIG.guide.enabled && finale?.phase() === 'play' && !intro?.active() && !tutLetter &&
+    input.active && now - lastSuccessAt > CONFIG.help.afterMs;
   const cur = letters?.current();
+  // Guía fija: dice qué hacer y marca (con un latido) la letra del paso actual.
+  const guideTarget = guide?.update({
+    current: cur, tutLetter, phase: finale?.phase() ?? 'play', hidden: !!intro?.active(),
+  });
+  letters?.letters.forEach((l) => { l.beacon = CONFIG.guide.beacon && l === guideTarget && !tutLetter ? 1 : 0; });
   if (tutLetter) help?.update(now, dt * 1000, tutLetter, true);
   else help?.update(now, dt * 1000, cur && cur.gesture ? cur : null, stuck || forceHelp);
   renderer.render(scene, camera);

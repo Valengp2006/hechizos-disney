@@ -134,6 +134,7 @@ class Letter {
     this.preview = 0;       // 0..1: vista previa del objeto (mini-tutorial)
     this.alwaysLit = false; // el final la deja siempre iluminada
     this.cursor = null;     // {x, y} del cursor, lo pone el reparto cada frame
+    this.beacon = 0;        // 0..1: la guía marca esta letra (late en la oscuridad)
 
     // Hechizo propio de la letra (si existe). Se crea una vez; solo se anima.
     this.spell = SPELLS[char] ? SPELLS[char](this) : null;
@@ -262,6 +263,13 @@ class Letter {
       default: break;
     }
 
+    // Faro de la guía: la letra del paso actual late (polvo más vivo y un fantasma tenue).
+    if (this.beacon > 0 && (this.state === STATE.LATENT || this.state === STATE.SENSITIVE)) {
+      const bp = this.beacon * (0.5 + 0.5 * Math.sin(timeS * 3.2));
+      dustOp += CONFIG.guide.beaconStrength * bp;
+      lineOp = Math.max(lineOp, CONFIG.guide.beaconGhost * bp);
+      pointOp = Math.max(pointOp, CONFIG.guide.beaconGhost * 0.5 * bp);
+    }
     // Contagio: saltito de alegría (despierta) o avivamiento (dormida), por reglas fijas.
     const cheerP = this.cheerT < 500 ? Math.sin((Math.PI * this.cheerT) / 500) : 0;
     const exciteP = this.exciteT < 900 ? 1 - this.exciteT / 900 : 0;

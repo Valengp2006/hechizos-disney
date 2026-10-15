@@ -52,6 +52,25 @@ export const CONFIG = {
     },
   },
 
+  // ---------- Guía siempre visible ----------
+  // Barra fija con los seis pasos (uno por letra): el paso actual con su gesto animado y qué
+  // hacer; los hechos, iluminados. La letra del paso actual "late" en la oscuridad para saber dónde.
+  // Decisión consciente: contradice la regla de no explicar con texto; se registra en la bitácora.
+  guide: {
+    enabled: true,
+    beacon: true,             // la letra del paso actual late (brillo del polvo + fantasma tenue)
+    beaconStrength: 0.4,      // cuánto brilla su polvo al latir (0..1)
+    beaconGhost: 0.16,        // opacidad máxima del fantasma de la letra al latir
+    steps: {                  // texto de cada paso (orden = font.word)
+      D: { name: 'campana', label: 'círculo', text: 'Dibuja un círculo' },
+      I: { name: 'vela', label: 'subir', text: 'Sube en línea recta' },
+      S: { name: 'cinta', label: 'barrer', text: 'Barre de lado a lado' },
+      N: { name: 'estrella', label: 'zigzag', text: 'Haz un zigzag' },
+      E: { name: 'arpa', label: 'quieto', text: 'Quédate quieto un momento' },
+      Y: { name: 'flor', label: 'agarrar', text: 'Mantén el clic y suelta' },
+    },
+  },
+
   // ---------- Mini-tutorial (tras el cuento) ----------
   // Cada letra, en el orden de la palabra, muestra su objeto y dibuja su gesto con luz.
   tutorial: {

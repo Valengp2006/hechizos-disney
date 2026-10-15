@@ -34,6 +34,8 @@ Pantalla casi negra y un punto de luz que sigue al cursor. Las letras no se ven:
 
 **Letras-objeto:** al despertar, cada letra se rellena y se convierte en su objeto, con color propio, iluminado por el cursor sobre la oscuridad (lejos de él queda en penumbra): **D** campana, **I** vela, **S** cinta, **N** estrella, **E** arpa, **Y** flor sobre tallo. Siguen leyéndose como letras y forman la palabra DISNEY.
 
+**Guía siempre visible:** una barra al pie muestra los seis pasos (uno por letra, en el orden de la palabra): los despiertos, encendidos y con una marca; el actual con su gesto animado, qué hacer y dónde (la letra del paso actual **late** en la oscuridad); los pendientes, apagados. Se apaga durante el cuento y, al terminar, cuenta lo que pasa en el final.
+
 **Mini-tutorial:** tras el cuento, cada letra (en el orden de la palabra) muestra su objeto y dibuja su gesto con luz, ~2 s cada una. Un clic lo salta; en dev, la tecla `T` lo lanza.
 
 Cuando las seis despiertan, convergen en DISNEY, hay un silencio y aparece un castillo genérico hecho con las propias letras. Tras 30 s sin interacción, todo vuelve a la oscuridad.
