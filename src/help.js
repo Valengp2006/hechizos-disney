@@ -41,7 +41,7 @@ export function createHelp({ scene }) {
   let level = 0; // 0..1 suavizado: aparece y se va con calma
   let lastLetter = null;
 
-  function update(now, dtMs, letter, show) {
+  function update(now, dtMs, letter, show, opts = {}) {
     // Al cambiar de letra el pictograma reaparece desde cero (no "salta" de una a otra).
     if (letter !== lastLetter) { level = 0; lastLetter = letter; }
     level += ((show && letter ? 1 : 0) - level) * Math.min(1, (dtMs / 1000) * 3);
@@ -49,13 +49,13 @@ export function createHelp({ scene }) {
     obj.visible = true;
 
     const W = window.innerWidth, Hh = window.innerHeight;
-    const R = H.sizeRatio * Math.min(Hh, W * 0.75);
+    const R = H.sizeRatio * Math.min(Hh, W * 0.75) * (opts.big ? 1.55 : 1);
     const cx = letter.pos.x + (letter.shape.width * letter.scale) / 2;
     const cy = letter.pos.y + (letter.shape.height * letter.scale) / 2;
     const u = (now % H.periodMs) / H.periodMs;
     const kind = letter.gesture;
     const shape = SHAPES[kind];
-    const op = H.opacity * level;
+    const op = Math.min(1, H.opacity * (opts.big ? 1.5 : 1)) * level;
     const set = (i, x, y, b, c) => {
       pos[i * 3] = x; pos[i * 3 + 1] = y;
       col[i * 3] = c.r * b * op; col[i * 3 + 1] = c.g * b * op; col[i * 3 + 2] = c.b * b * op;

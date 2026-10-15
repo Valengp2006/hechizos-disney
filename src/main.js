@@ -6,7 +6,7 @@ import { CONFIG } from './config.js';
 import { loadFont } from './font.js';
 import { createLetters } from './letter.js';
 import { onModeChange, tickPanel } from './mode.js';
-import { initAudio } from './audio.js';
+import { initAudio, sfx } from './audio.js';
 import { input, initInput, updateInput } from './input.js';
 import { createDust } from './dust.js';
 import { createLightPoint } from './render.js';
@@ -48,6 +48,9 @@ let tutorial = null;
 let guide = null;
 let tutorialPending = false;
 let lastSuccessAt = performance.now(); // último acierto (para decidir cuándo ayudar)
+const prevState = new Map();            // estado anterior de cada letra (para sus sonidos)
+let lastPhase = 'play';
+const sfxProgress = { ch: null };
 let nearSince = 0;                      // desde cuándo está cerca de la letra del paso actual
 let forceHelp = false;                  // dev: tecla H muestra la ayuda al instante // se crea al cargar la fuente; declarado antes de onModeChange, que llama a syncDebug al registrarse
 let debugOn = true;
@@ -171,6 +174,28 @@ renderer.setAnimationLoop(() => {
   if (fired) onGesture(fired, report.firedTrail, { heldMs: report.grab.heldMs });
   letters?.update(dt * 1000, clock.elapsedTime, input, report.progress);
   if (dev && debugOn) gestureDebug.update(report, now, letters?.states());
+  // Sonido: cada cambio de estado de una letra y cada fase del final tiene su sonido.
+  letters?.letters.forEach((l) => {
+    const prev = prevState.get(l);
+    if (prev !== l.state) {
+      if (prev !== undefined) {
+        if (l.state === 'sensitive') sfx.sense(l.char);
+        else if (l.state === 'playing') sfx.open(l.char);
+        else if (l.state === 'listening') sfx.wrong();
+        else if (l.state === 'conjured') sfx.conjure(l.char);
+      }
+      prevState.set(l, l.state);
+    }
+    if (l.cheerT === 0 || (l.cheerT < dt * 1000 + 1 && l.state === 'awake')) sfx.cheer();
+  });
+  const playingLetter = letters?.letters.find((l) => l.state === 'playing');
+  if (playingLetter) sfx.progress(playingLetter.char, playingLetter.gameProgress);
+  const phaseNow = finale?.phase();
+  if (phaseNow && phaseNow !== lastPhase) {
+    if (phaseNow === 'converge') sfx.converge();
+    else if (phaseNow === 'reveal') sfx.reveal();
+    lastPhase = phaseNow;
+  }
   intro?.update(now);
   if (dev && ++nanChecked % 120 === 0 && nanChecked < 1300) checkNaN();
   // Ayuda por luz: si lleva mucho sin acertar y hay una letra cerca, dibuja su gesto.
@@ -191,7 +216,11 @@ renderer.setAnimationLoop(() => {
   const nearGuide = !!(cur && cur === guideTarget && cur.state !== 'playing');
   nearSince = nearGuide ? (nearSince || now) : 0;
   const showNear = nearSince > 0 && now - nearSince > CONFIG.help.nearMs;
+  // Pista explícita: el gesto del juego en curso se dibuja grande junto a la letra.
+  const explicitGuide = !!(guideTarget && guideTarget.state === 'playing' && guideTarget.playT > CONFIG.guide.explicitAfterMs &&
+    guideTarget.gameProgress < 0.35);
   if (tutLetter) help?.update(now, dt * 1000, tutLetter, true);
+  else if (explicitGuide) help?.update(now, dt * 1000, guideTarget, true, { big: true });
   else help?.update(now, dt * 1000, cur && cur.gesture ? cur : null, stuck || forceHelp || showNear);
   renderer.render(scene, camera);
   tickPanel(performance.now() - frameStart); // incluye la lógica y el envío de dibujo

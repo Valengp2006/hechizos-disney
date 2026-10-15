@@ -106,6 +106,7 @@ export const CONFIG = {
   // Decisión consciente: contradice la regla de no explicar con texto; se registra en la bitácora.
   guide: {
     enabled: true,
+    explicitAfterMs: 18000,   // jugando sin avanzar esto: la guía da la instrucción paso a paso y se dibuja grande
     reserve: 0.2,             // fracción del alto reservada abajo para la barra (las letras no la tapan)
     beacon: true,             // la letra del paso actual late (brillo del polvo + fantasma tenue)
     beaconStrength: 0.4,      // cuánto brilla su polvo al latir (0..1)
@@ -114,12 +115,12 @@ export const CONFIG = {
     // palabra, para no revelar DISNEY antes de que las letras despierten.
     order: ['E', 'S', 'D', 'Y', 'I', 'N'],
     steps: {                  // texto de cada paso
-      D: { article: 'la', name: 'campana', label: 'círculo', text: 'Dibuja un círculo', game: 'Sigue dando vueltas y la campana sonará', hint: 'Si paras, se frena' },
-      I: { article: 'la', name: 'vela', label: 'subir', text: 'Sube en línea recta', game: 'Lleva las luciérnagas hasta la mecha', hint: 'Acércalas con tu luz y súbelas' },
-      S: { article: 'la', name: 'cinta', label: 'barrer', text: 'Barre de lado a lado', game: 'Sigue la luz con el cursor', hint: 'Que no se te escape' },
-      N: { article: 'la', name: 'estrella', label: 'agitar', text: 'Agita el cursor rápido', game: 'Sigue agitando para cargar la estrella', hint: 'Si paras, se apaga' },
-      E: { article: 'la', name: 'arpa', label: 'quieto', text: 'Quédate quieto un momento', game: 'Quédate quieto: las cuerdas irán sonando', hint: 'Moverte las espanta' },
-      Y: { article: 'la', name: 'flor', label: 'agarrar', text: 'Mantén el clic y suelta', game: 'Mantén el clic para regar y suelta para que florezca', hint: 'Si sueltas muy pronto, se marchita' },
+      D: { article: 'la', name: 'campana', label: 'círculo', text: 'Dibuja un círculo', game: 'Sigue dando vueltas y la campana sonará', hint: 'Si paras, se frena', explicit: 'Mueve el cursor en círculos alrededor de la campana, sin parar' },
+      I: { article: 'la', name: 'vela', label: 'subir', text: 'Sube en línea recta', game: 'Lleva las luciérnagas hasta la mecha', hint: 'Acércalas con tu luz y súbelas', explicit: 'Acerca tu luz a una luciérnaga hasta que te siga y súbela hasta la llama' },
+      S: { article: 'la', name: 'cinta', label: 'barrer', text: 'Barre de lado a lado', game: 'Sigue la luz con el cursor', hint: 'Que no se te escape', explicit: 'Mueve el cursor junto a la luz que ondula por la pantalla, sin alejarte' },
+      N: { article: 'la', name: 'estrella', label: 'agitar', text: 'Agita el cursor rápido', game: 'Sigue agitando para cargar la estrella', hint: 'Si paras, se apaga', explicit: 'Sacude el cursor rápido de un lado a otro, como agitándolo' },
+      E: { article: 'la', name: 'arpa', label: 'quieto', text: 'Quédate quieto un momento', game: 'Quédate quieto: las cuerdas irán sonando', hint: 'Moverte las espanta', explicit: 'No muevas el cursor: déjalo quieto hasta que suenen las tres cuerdas' },
+      Y: { article: 'la', name: 'flor', label: 'agarrar', text: 'Mantén el clic y suelta', game: 'Mantén el clic para regar y suelta para que florezca', hint: 'Si sueltas muy pronto, se marchita', explicit: 'Mantén pulsado el botón unos 2 segundos y suéltalo para que florezca' },
     },
   },
 
@@ -153,6 +154,13 @@ export const CONFIG = {
     fadeInMs: 3000,
     // Fundido de salida al entrar en el silencio del final (ms).
     fadeOutMs: 800,
+    // Sonido mágico sintetizado (sin archivos): notas de celesta con eco que responden al juego.
+    sfx: {
+      enabled: true,
+      volume: 0.55,           // volumen de los efectos 0..1
+      echo: 0.38,             // cuánto eco/brillo llevan (0 = secos)
+      pad: 0.055,             // colchón suave de fondo (0 = sin colchón)
+    },
   },
 
   // ---------- Tipografía ----------

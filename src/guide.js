@@ -100,7 +100,8 @@ export function createGuide({ letters }) {
 
   // `tutLetter`: letra en turno del mini-tutorial; `phase`: fase del final; `hidden`: durante el cuento.
   function update({ current, tutLetter, tutPhase, phase, hidden }) {
-    if (!G.enabled || hidden) { root.style.display = 'none'; return null; }
+    // Al completar la palabra la guía desaparece: ya no hace falta y no debe tapar el final.
+    if (!G.enabled || hidden || phase !== 'play') { root.style.display = 'none'; sig = ''; return null; }
     root.style.display = 'block';
     // Las letras en el orden de la guía (no el de la palabra).
     const ls = word.map((ch) => letters.letters.find((l) => l.char === ch)).filter(Boolean);
@@ -123,15 +124,18 @@ export function createGuide({ letters }) {
     const gaming = !!(target && target.state === 'playing');
     // Indicación viva mientras se juega: acompaña a la persona, no juega por ella.
     let coach = '';
+    // Pista explícita: llevando mucho en el juego sin avanzar, se da la instrucción paso a paso.
+    const explicit = gaming && target.playT > G.explicitAfterMs && target.gameProgress < 0.35;
     if (gaming) {
       const s0 = G.steps[target.char];
-      if (target.assistLevel > 0.3) coach = 'Te lo pongo un poco más fácil: sigue intentándolo';
+      if (explicit) coach = 'Tranquilo: puedes tomarte tu tiempo';
+      else if (target.assistLevel > 0.3) coach = 'Te lo pongo un poco más fácil: sigue intentándolo';
       else if (target.gameProgress > 0.7) coach = '¡Casi! No pares';
       else if (target.gameTrend > 0.02) coach = 'Vas bien, sigue así';
       else if (target.gameProgress > 0.05) coach = s0.hint;
       else coach = s0.hint;
     }
-    const key = [phase, target ? target.char : '-', near ? 1 : 0, gaming ? 1 : 0, tutPhase || '-', coach, doneSet.join('')].join('|');
+    const key = [phase, target ? target.char : '-', near ? 1 : 0, gaming ? 1 : 0, tutPhase || '-', explicit ? 'x' : '-', coach, doneSet.join('')].join('|');
     if (key !== sig) {
       sig = key;
       const n = doneSet.filter(Boolean).length;
@@ -159,7 +163,7 @@ export function createGuide({ letters }) {
           smallEl.textContent = 'Con este gesto se abre su juego · clic para saltar';
         } else {
           stepEl.textContent = `${n} de ${ls.length} despiertas · ${gaming ? 'jugando con' : 'ahora:'} ${s.article} ${s.name}`;
-          bigEl.textContent = gaming ? s.game : s.text;
+          bigEl.textContent = gaming ? (explicit ? s.explicit : s.game) : s.text;
           smallEl.textContent = gaming ? coach
             : (near ? 'Hazlo aquí, junto a la letra.' : 'Acércate a la letra que late en la oscuridad.');
         }
@@ -168,5 +172,5 @@ export function createGuide({ letters }) {
     return playing ? target : null;
   }
 
-  return { update, setVisible: (v) => { G.enabled = v; } };
+  return { update, setVisible: (v) => { G.enabled = v; }, explicit: () => sig.includes('|x|') };
 }
