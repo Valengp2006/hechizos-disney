@@ -77,12 +77,17 @@ class Letter {
     }
     this.pointMat = new THREE.PointsMaterial({
       map: haloTexture(), color: this.cRose, transparent: true, opacity: 0, depthWrite: false,
-      blending: THREE.AdditiveBlending, size: 7, sizeAttenuation: false,
+      blending: THREE.AdditiveBlending, size: 7, sizeAttenuation: false, vertexColors: true,
     });
-    this.body.add(new THREE.Points(
-      new THREE.BufferGeometry().setFromPoints(this.shape.points.map((p) => new THREE.Vector3(p.x, p.y, 0))),
-      this.pointMat,
-    ));
+    // Brillo distinto en cada punto del borde (polvo irregular, no una fila pareja).
+    const edgeGeo = new THREE.BufferGeometry().setFromPoints(this.shape.points.map((p) => new THREE.Vector3(p.x, p.y, 0)));
+    const edgeCol = new Float32Array(this.shape.points.length * 3);
+    for (let i = 0; i < this.shape.points.length; i++) {
+      const v = 0.35 + 0.65 * (Math.sin(i * 12.9898 + index * 4.1) * 0.5 + 0.5) ** 1.4;
+      edgeCol[i * 3] = edgeCol[i * 3 + 1] = edgeCol[i * 3 + 2] = v;
+    }
+    edgeGeo.setAttribute('color', new THREE.BufferAttribute(edgeCol, 3));
+    this.body.add(new THREE.Points(edgeGeo, this.pointMat));
 
     // Polvo de la zona: nace en la caja de la letra (semilla por letra: decorativo).
     const n = CONFIG.letters.latentDustCount;
@@ -372,6 +377,8 @@ class Letter {
     if (this.spell?.charge && this.state !== STATE.CONJURED && this.state !== STATE.AWAKE) {
       this.spell.charge(this.chargeLevel, timeS);
     }
+    // Con la letra ya rellena, el borde de puntos queda como un polvo tenue, no como un contorno.
+    pointOp *= 1 - CONFIG.icons.dotFade * Math.min(1, this.fillOp);
     this.lineMat.color.copy(color);
     this.pointMat.color.copy(color);
     this.lineMat.opacity = lineOp;

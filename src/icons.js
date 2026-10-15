@@ -6,6 +6,7 @@
 // letra (la caja de la letra es [0,w] x [0,h]; y crece hacia abajo).
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
+import { haloTexture } from './render.js';
 
 const DEG = Math.PI / 180;
 
@@ -37,6 +38,30 @@ function glyphShapes(contours) {
   return outers;
 }
 
+// Grano de papel: ruido determinista en gris claro que modula el color del relleno.
+let grain = null;
+function grainTexture() {
+  if (grain) return grain;
+  const n = 96, c = document.createElement('canvas');
+  c.width = c.height = n;
+  const g = c.getContext('2d'), img = g.createImageData(n, n);
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      // Dos octavas de ruido de valor, deterministas.
+      const h1 = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; const a = h1 - Math.floor(h1);
+      const h2 = Math.sin((x >> 2) * 39.346 + (y >> 2) * 11.135) * 24634.634; const b = h2 - Math.floor(h2);
+      const v = 255 * (1 - CONFIG.icons.grain * (0.65 * a + 0.35 * b));
+      const k = (y * n + x) * 4;
+      img.data[k] = img.data[k + 1] = img.data[k + 2] = v; img.data[k + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  grain = new THREE.CanvasTexture(c);
+  grain.wrapS = grain.wrapT = THREE.RepeatWrapping;
+  grain.repeat.set(1 / 42, 1 / 42);
+  return grain;
+}
+
 export function createIcon(letter) {
   const { contours, width: w, height: h } = letter.shape;
   const u = h; // unidad de tamaño de los detalles (alto de la letra)
@@ -54,9 +79,24 @@ export function createIcon(letter) {
     parts.push({ mat, base: new THREE.Color(base), ...extra });
     return obj;
   };
+  const IC = CONFIG.icons;
   const fill = (shapes, hex, extra) => {
     const mat = mkMat(hex);
     const geo = new THREE.ShapeGeometry(shapes);
+    if (extra && extra.shade) {
+      // Sombreado: luz desde arriba a la izquierda (más claro arriba, más oscuro abajo).
+      const pos = geo.attributes.position, n = pos.count;
+      const col = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        const ty = Math.min(1, Math.max(0, pos.getY(i) / Math.max(1, h)));
+        const tx = Math.min(1, Math.max(0, pos.getX(i) / Math.max(1, w)));
+        const v = Math.max(0.15, 1 + IC.shading * (0.45 - ty * 0.9) + IC.shading * 0.12 * (0.5 - tx));
+        col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = v;
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      mat.vertexColors = true;
+      if (IC.grain > 0) { mat.map = grainTexture(); }
+    }
     return add(new THREE.Mesh(geo, mat), mat, hex, extra);
   };
   const poly = (pts, hex, extra) => fill(new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y))), hex, extra);
@@ -79,8 +119,28 @@ export function createIcon(letter) {
   };
 
   const base = CONFIG.icons.colors[letter.char] || '#ffffff';
-  const body = fill(glyphShapes(contours), base); // el relleno de la propia letra
-  void body;
+  // Aura cálida detrás de la letra (se ve al despertar), para que no sea un recorte plano.
+  const auraMat = new THREE.PointsMaterial({
+    map: haloTexture(), color: new THREE.Color('#ffc46b'), transparent: true, opacity: 0, depthWrite: false,
+    blending: THREE.AdditiveBlending, size: 10, sizeAttenuation: false,
+  });
+  const auraGeo = new THREE.BufferGeometry();
+  auraGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0.5 * w, 0.5 * h, 0]), 3));
+  const aura = new THREE.Points(auraGeo, auraMat);
+  aura.renderOrder = -3; aura.frustumCulled = false;
+  group.add(aura);
+  // El relleno de la propia letra, con luz y sombra y grano de papel.
+  fill(glyphShapes(contours), base, { shade: true });
+  // Brillo de borde: el contorno desplazado hacia arriba-izquierda, en un tono claro.
+  if (IC.rim > 0) {
+    const d = 0.016 * u;
+    contours.forEach((c) => {
+      if (c.points.length < 3) return;
+      const pts = c.points.map((p) => [p.x - d, p.y - d]);
+      if (c.closed) pts.push(pts[0]);
+      line(pts, '#fff0c8', { rim: true });
+    });
+  }
 
   switch (letter.char) {
     case 'D': { // campana: asa arriba, badajo colgando en la panza
@@ -165,8 +225,11 @@ export function createIcon(letter) {
     for (const p of parts) {
       const g = (p.glow || 1) * (p.flicker !== undefined ? 1 + 0.12 * Math.sin(t * 9 + p.flicker * 2) : 1);
       p.mat.color.copy(p.base).multiplyScalar(Math.min(1.4, light * g));
-      p.mat.opacity = fillOp;
+      p.mat.opacity = p.rim ? fillOp * IC.rim * Math.min(1, light) : fillOp;
     }
+    // Aura: crece con la luz que recibe la letra y respira despacio.
+    auraMat.size = Math.min(520, 2.4 * h * letter.scale);
+    auraMat.opacity = IC.aura * fillOp * (0.55 + 0.45 * light) * (0.85 + 0.15 * Math.sin(t * 1.3));
   }
 
   return { group, update };

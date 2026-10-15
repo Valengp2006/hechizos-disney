@@ -3,6 +3,15 @@
 // Cada parámetro dice qué controla y qué esperar si se sube o se baja.
 
 export const CONFIG = {
+  // ---------- Fondo (cielo de crepúsculo) ----------
+  backdrop: {
+    enabled: true,
+    mist: 0.75,               // cuánta niebla (0 = ninguna, 1 = mucha)
+    stars: 160,               // estrellas que titilan
+    starBrightness: 0.9,      // su brillo 0..1
+    bokeh: 0.07,              // luces desenfocadas flotantes (0 = ninguna)
+  },
+
   // ---------- Pantalla de inicio ----------
   // Pide un clic para comenzar: enciende el audio (el navegador lo exige) y arranca el cuento.
   start: {
@@ -98,6 +107,11 @@ export const CONFIG = {
   // más unos pocos detalles (asa, llama, sol...), así la letra sigue leyéndose.
   icons: {
     enabled: true,
+    shading: 0.5,             // contraste de luz y sombra del relleno (0 = plano)
+    grain: 0.22,              // grano de papel del relleno (0 = liso)
+    rim: 0.55,                // brillo del borde superior-izquierdo
+    aura: 0.28,               // resplandor cálido detrás de la letra despierta
+    dotFade: 0.75,            // cuánto se atenúa el borde de puntos cuando la letra está rellena (0..1)
     ambient: 0.35,            // brillo del objeto lejos del cursor (0 = invisible, 1 = siempre pleno)
     lightRadius: 300,         // alcance (px) de la luz del cursor sobre los objetos
     fadeSpeed: 5,             // qué tan rápido se rellena la letra al despertar
@@ -186,6 +200,8 @@ export const CONFIG = {
     sampleSpacing: 6,
     // Segmentos con que se aplana cada curva Bézier. Más = contorno más fino.
     curveSteps: 12,
+    // Temblor de "dibujado a mano" de los contornos de las letras (fracción del tamaño). 0 = perfecto.
+    wobble: 0.011,
     // Tamaño de las letras en el modo depuración, como fracción del alto de pantalla.
     debugSizeRatio: 0.35,
   },

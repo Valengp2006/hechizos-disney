@@ -18,6 +18,7 @@ import { createHelp } from './help.js';
 import { createTutorial } from './tutorial.js';
 import { createGuide } from './guide.js';
 import { createStartMenu } from './start.js';
+import { createBackdrop } from './backdrop.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -29,6 +30,7 @@ const rgb = ([r, g, b]) => new THREE.Color().setRGB(r / 255, g / 255, b / 255, T
 scene.background = rgb(CONFIG.visual.background);
 
 const camera = new THREE.OrthographicCamera(0, 1, 0, 1, -1000, 1000);
+const backdrop = createBackdrop(scene);
 
 // El debug solo existe en modo dev; D lo muestra u oculta dentro de dev.
 let dev = false;
@@ -125,6 +127,7 @@ function resize() {
   // top=0, bottom=h: el eje y crece hacia abajo, como en el mouse.
   camera.left = 0; camera.right = w; camera.top = 0; camera.bottom = h;
   camera.updateProjectionMatrix();
+  backdrop.resize(w, h);
   dust.resize(w, h);
   letters?.layout(w, h);
 }
@@ -168,6 +171,7 @@ renderer.setAnimationLoop(() => {
   const frameStart = performance.now();
   const dt = Math.min(clock.getDelta(), 0.1); // tope: una pestaña dormida no hace saltar nada
   updateInput(dt);
+  backdrop.update(clock.elapsedTime);
   // Antes de comenzar las letras no reaccionan: se les da una entrada inactiva.
   const gameInput = started ? input : idleInput;
   finale?.update(dt * 1000, performance.now(), gameInput);

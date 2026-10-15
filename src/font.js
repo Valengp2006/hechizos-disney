@@ -81,6 +81,19 @@ export function letterShape(font, char, size) {
   const contours = flatten(path.commands, CONFIG.font.curveSteps);
   // Mueve el origen a la esquina superior izquierda de la caja de la letra.
   for (const c of contours) for (const p of c.points) { p.x -= bb.x1; p.y -= bb.y1; }
+  // Temblor de "dibujado a mano": un desplazamiento suave y determinista según la posición,
+  // igual para contorno, relleno y puntos (así todo sigue coincidiendo).
+  const A = CONFIG.font.wobble * size;
+  if (A > 0) {
+    const k = char.charCodeAt(0) * 0.37;
+    for (const c of contours) {
+      for (const p of c.points) {
+        const ox = A * (Math.sin(p.y * 0.052 + k) + 0.55 * Math.sin(p.x * 0.097 + k * 1.7));
+        const oy = A * (Math.sin(p.x * 0.047 + k * 0.6) + 0.55 * Math.sin(p.y * 0.083 + k * 2.1));
+        p.x += ox; p.y += oy;
+      }
+    }
+  }
   const points = contours.flatMap((c) => sampleContour(c, CONFIG.font.sampleSpacing));
   return {
     char,
