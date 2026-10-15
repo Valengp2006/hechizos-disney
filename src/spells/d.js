@@ -145,5 +145,17 @@ export function createPortal(letter) {
     return (0.3 + 1.3 * e) * 0.5 * Math.hypot(w, h) * letter.scale;
   }
 
-  return { conjured, awake, reset, reach, anchor };
+  // Portal abierto: punto de fuga y radio de captura (px de pantalla), para encadenamientos.
+  // Con el portal en plena apertura captura más; con la copia que queda girando, menos.
+  function portal() {
+    if (letter.state !== 'conjured' && letter.state !== 'awake') return null;
+    const sc = letter.scale;
+    return {
+      x: letter.pos.x + vp.x * sc,
+      y: letter.pos.y + vp.y * sc,
+      r: 0.5 * Math.max(w, h) * sc * (letter.state === 'conjured' ? 1 : 0.5),
+    };
+  }
+
+  return { conjured, awake, reset, reach, portal, anchor };
 }

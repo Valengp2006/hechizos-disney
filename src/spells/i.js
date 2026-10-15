@@ -124,5 +124,19 @@ export function createGravity(letter) {
     geo.attributes.color.needsUpdate = true;
   }
 
-  return { conjured, awake, reset };
+  // Columna de polvo que sube (px de pantalla), para encadenamientos: levanta a quien la cruza.
+  function column() {
+    if (letter.state !== 'conjured') return null;
+    const k = letter.progress;
+    const sc = letter.scale;
+    return {
+      cx: letter.pos.x + (letter.shape.width / 2) * sc,
+      halfW: (letter.shape.width / 2) * sc,
+      yTop: letter.pos.y,                     // arriba de la letra, en pantalla
+      height: cfg.riseHeight,
+      lift: 0.3 * window.innerHeight * smooth(0.2, 0.5, k) * (1 - smooth(0.75, 1, k)),
+    };
+  }
+
+  return { conjured, awake, reset, column };
 }

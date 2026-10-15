@@ -6,6 +6,12 @@
 //
 // Línea de tiempo (k = 0..1 sobre spells.durationMs.S), por punto con t en 0..1:
 //   t 0–0.55 ida ondulada · 0.55–0.75 rizo · 0.75–1 vuelta y recomposición.
+//
+// Encadenamientos (reglas fijas, contacto -> efecto):
+//   · Si hay un portal abierto (D) en el sentido del barrido, la cinta no hace el rizo
+//     en el aire: va hacia el portal, es absorbida girando en espiral, sale por el túnel
+//     (más brillante, dorada) y vuelve a su sitio.
+//   · Si cruza la columna de una I en gravedad invertida, la columna la levanta.
 //   El punto j sale un poco después que el anterior (ribbonSpread): eso es la cinta.
 // Determinista: el orden de los puntos, el ondulado y los ecos salen del índice.
 import * as THREE from 'three';
@@ -36,21 +42,38 @@ export function createRibbon(letter) {
   letter.group.add(obj);
 
   let dir = 1;
+  let via = null; // portal por el que pasa la cinta, si lo hay: {x, y, r} en pantalla
   let headPos = null; // posición en pantalla de la cabeza de la cinta (encadenamientos)
   const tmp = new THREE.Color();
 
   // El gesto define el sentido: izquierda o derecha según el trazo del barrido.
   function start(trail) {
     if (trail && trail.length > 1) {
-      const dx = trail[trail.length - 1].x - trail[0].x;
+      // Sentido del barrido = desplazamiento del tramo final (el gesto en sí); el recorrido
+      // de aproximación a la letra, que también llega en el trazo, no debe decidirlo.
+      const tEnd = trail[trail.length - 1].t;
+      const recent = trail.filter((p) => p.t >= tEnd - 350);
+      const seg = recent.length > 1 ? recent : trail;
+      const dx = seg[seg.length - 1].x - seg[0].x;
       dir = dx >= 0 ? 1 : -1;
     } else {
       dir = letter.pos.x < window.innerWidth / 2 ? 1 : -1;
+    }
+    // Busca un portal abierto en el sentido del barrido; gana el más cercano.
+    via = null;
+    const ox = letter.pos.x + (letter.shape.width / 2) * letter.scale;
+    let best = Infinity;
+    for (const o of letter.peers) {
+      const p = o !== letter && o.spell?.portal?.();
+      if (!p) continue;
+      const dx = p.x - ox;
+      if (Math.sign(dx) === dir && Math.abs(dx) < best) { best = Math.abs(dx); via = p; }
     }
   }
 
   // Posición en pantalla del punto de la cinta en el instante t (0..1).
   function pathAt(t, ox, oy, W, H) {
+    if (via) return pathVia(t, ox, oy, H);
     const D = Math.min(cfg.ribbonDistance * W, dir > 0 ? W * 0.95 - ox : ox - W * 0.05);
     const Ex = ox + dir * D, Ey = oy - 0.08 * H;
     const amp = cfg.ribbonWave * H, R = cfg.ribbonLoop * H;
@@ -67,7 +90,31 @@ export function createRibbon(letter) {
     return [Ex + (ox - Ex) * e, Ey + (oy - Ey) * e + amp * Math.sin(2 * Math.PI * u) * Math.sin(Math.PI * u)];
   }
 
+  // Trayectoria con portal: ida ondulada hasta el borde del portal, espiral hacia dentro
+  // (absorbida) y hacia fuera (sale por el túnel), y vuelta al sitio de la S.
+  function pathVia(t, ox, oy, H) {
+    const amp = cfg.ribbonWave * H, Rs = cfg.ribbonLoop * H;
+    const th0 = Math.atan2(oy - via.y, ox - via.x);         // apunta de vuelta hacia la S
+    const Px = via.x + Rs * Math.cos(th0), Py = via.y + Rs * Math.sin(th0);
+    if (t < 0.55) {
+      const u = t / 0.55, e = smooth01(u);
+      return [ox + (Px - ox) * e, oy + (Py - oy) * e + amp * Math.sin(2 * Math.PI * 1.25 * u) * Math.sin(Math.PI * u)];
+    }
+    if (t < 0.75) {
+      const v = (t - 0.55) / 0.2;
+      const r = Rs * Math.abs(1 - 2 * v);                    // R -> 0 (entra) -> R (sale)
+      const th = th0 + dir * 4 * Math.PI * v;                // dos vueltas
+      return [via.x + r * Math.cos(th), via.y + r * Math.sin(th)];
+    }
+    const u = (t - 0.75) / 0.25, e = smooth01(u);
+    return [Px + (ox - Px) * e, Py + (oy - Py) * e + amp * Math.sin(2 * Math.PI * u) * Math.sin(Math.PI * u)];
+  }
+
+  // Columnas de I en gravedad invertida que pueden levantar la cinta.
+  const columns = () => letter.peers.map((o) => o !== letter && o.spell?.column?.()).filter(Boolean);
+
   function reset() {
+    via = null;
     headPos = null;
     col.fill(0);
     geo.attributes.color.needsUpdate = true;
@@ -78,6 +125,7 @@ export function createRibbon(letter) {
     const sc = letter.scale;
     const ox = letter.pos.x + (letter.shape.width / 2) * sc;
     const oy = letter.pos.y + (letter.shape.height / 2) * sc;
+    const cols = columns();
 
     for (let j = 0; j < P; j++) {
       const order = j / P;
@@ -95,6 +143,15 @@ export function createRibbon(letter) {
         const leave = smooth(0, 0.1, tt), land = smooth(0.85, 1, tt);
         sx = bx + (sx - bx) * leave * (1 - land);
         sy = by + (sy - by) * leave * (1 - land);
+        // La columna de la I levanta a quien la cruza (más cerca del centro, más alto).
+        let lifted = 0;
+        for (const c of cols) {
+          const wx = Math.exp(-(((sx - c.cx) / (c.halfW * 0.8 + 36)) ** 2));
+          const wy = smooth(c.yTop + 40, c.yTop - 20, sy) * smooth(c.yTop - c.height - 40, c.yTop - c.height + 60, sy);
+          const wgt = wx * wy;
+          sy -= c.lift * wgt;
+          lifted = Math.max(lifted, wgt);
+        }
         if (e > 0) { // confeti: el eco se desvía un poco, siempre igual para el mismo punto
           sx += Math.sin(j * 12.9898 + e) * 7;
           sy += Math.cos(j * 78.233 + e) * 7;
@@ -102,8 +159,18 @@ export function createRibbon(letter) {
         if (j === 0 && e === 0) headPos = { x: sx, y: sy };
         pos[idx * 3] = (sx - letter.pos.x) / sc;
         pos[idx * 3 + 1] = (sy - letter.pos.y) / sc;
-        const bright = (e === 0 ? 0.95 : 0.45 / e) * smooth(0, 0.06, tt);
+        let bright = (e === 0 ? 0.95 : 0.45 / e) * smooth(0, 0.06, tt);
         tmp.copy(letter.cRose).lerp(letter.cAmber, order).lerp(letter.cAwake, smooth(0.85, 1, tt));
+        // Absorbida: se atenúa al entrar al portal y sale más brillante y dorada.
+        if (via && tt >= 0.55 && tt < 0.75) {
+          const v = (tt - 0.55) / 0.2;
+          bright *= 0.25 + 0.75 * Math.abs(1 - 2 * v) + (v > 0.5 ? 0.5 * (v - 0.5) * 2 : 0);
+          if (v > 0.5) tmp.lerp(letter.cAwake, (v - 0.5) * 2);
+        } else if (via && tt >= 0.75) {
+          bright *= 1.4;
+          tmp.lerp(letter.cAwake, 0.6);
+        }
+        bright *= 1 + 0.5 * lifted;               // levantada por la columna: se aviva
         col[idx * 3] = tmp.r * bright; col[idx * 3 + 1] = tmp.g * bright; col[idx * 3 + 2] = tmp.b * bright;
       }
     }

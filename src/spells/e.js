@@ -120,5 +120,13 @@ export function createLighthouse(letter) {
     draw(0.5, 0.45 + 0.4 * breath, ms / 1000 + cfg.durationMs.E / 1000);
   }
 
-  return { conjured, awake, reset };
+  // Contagio (la chispa de la N, la luz del portal...): los haces destellan un instante
+  // aunque la E esté dormida. `level` 0..1 lo decide la letra.
+  let flaring = false;
+  function flare(level, sec) {
+    if (level > 0.01) { draw(0.5 * level + 0.15, 0.9 * level, sec); flaring = true; }
+    else if (flaring) { reset(); flaring = false; }
+  }
+
+  return { conjured, awake, reset, flare };
 }

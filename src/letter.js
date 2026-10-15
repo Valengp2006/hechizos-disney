@@ -267,6 +267,10 @@ class Letter {
       tremble = Math.max(tremble, L.trembleAmplitude * exciteP);
     }
     this.setStretch(stretch);
+    // Letras con destello por contagio (E): sus haces se asoman aunque duerman.
+    if (this.spell?.flare && this.state !== STATE.CONJURED && this.state !== STATE.AWAKE) {
+      this.spell.flare(exciteP, timeS);
+    }
     // Carga (agarre sostenido): el hechizo muestra que se está preparando.
     if (this.spell?.charge && this.state !== STATE.CONJURED && this.state !== STATE.AWAKE) {
       this.spell.charge(this.chargeLevel, timeS);
