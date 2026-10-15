@@ -110,15 +110,18 @@ export function createGuide({ letters }) {
 
     // Paso actual: la del tutorial, la pendiente más cercana al cursor, o la primera pendiente.
     let target = null;
+    const inGame = ls.find((l) => l.state === 'playing');
     if (playing) {
-      if (tutLetter) target = tutLetter;
+      if (inGame) target = inGame;
+      else if (tutLetter) target = tutLetter;
       else if (current && pending.includes(current)) target = current;
       else target = pending[0] || null;
     }
     const near = !!(current && target === current);
 
     // Para no tocar el DOM cada frame, solo se reescribe cuando cambia algo.
-    const key = [phase, target ? target.char : '-', near ? 1 : 0, doneSet.join('')].join('|');
+    const gaming = !!(target && target.state === 'playing');
+    const key = [phase, target ? target.char : '-', near ? 1 : 0, gaming ? 1 : 0, doneSet.join('')].join('|');
     if (key !== sig) {
       sig = key;
       const n = doneSet.filter(Boolean).length;
@@ -139,9 +142,10 @@ export function createGuide({ letters }) {
         const s = G.steps[target.char];
         pic.innerHTML = PICTO[GESTURE_KEY[target.gesture]] || '';
         // Sin nombrar la letra: se habla del objeto (la campana, la vela...).
-        stepEl.textContent = `${n} de ${ls.length} despiertas · ahora: ${s.article} ${s.name}`;
-        bigEl.textContent = s.text;
-        smallEl.textContent = near ? 'Hazlo aquí, junto a la letra.' : 'Acércate a la letra que late en la oscuridad.';
+        stepEl.textContent = `${n} de ${ls.length} despiertas · ${gaming ? 'jugando con' : 'ahora:'} ${s.article} ${s.name}`;
+        bigEl.textContent = gaming ? s.game : s.text;
+        smallEl.textContent = gaming ? s.hint
+          : (near ? 'Hazlo aquí, junto a la letra.' : 'Acércate a la letra que late en la oscuridad.');
       }
     }
     return playing ? target : null;

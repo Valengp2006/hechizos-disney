@@ -13,14 +13,18 @@ Contexto completo y reglas del proyecto: [AGENT.md](AGENT.md). Fuentes: [docs/re
 ## Cómo se juega
 Pantalla casi negra y un punto de luz que sigue al cursor. Las letras no se ven: cada una guarda un hechizo que se despierta con un gesto. Al acercarse, el polvo de la letra insinúa cuál es.
 
-| Letra | Gesto | Hechizo |
-|---|---|---|
-| D | círculo | **portal**: el contorno se repite hacia el fondo como un túnel de luz |
-| I | subir | **gravedad invertida**: el asta se estira y suelta polvo que cae un instante y luego sube |
-| S | barrido horizontal | **cinta**: se desenrolla y nada por la pantalla siguiendo el barrido |
-| N | zigzag | **relámpago**: descargas quebradas saltan entre las astas y por la diagonal |
-| E | quedarse quieto | **faro**: los brazos se alargan en haces que barren la oscuridad |
-| Y | agarrar (mantener) y soltar | **constelación-árbol**: la bifurcación se repite y florece |
+Cada letra se descubre en **tres tiempos**: el **gesto** la abre, un **minijuego** corto la despierta y su **hechizo** es la recompensa.
+
+| Letra | Gesto que la abre | Minijuego | Hechizo (recompensa) |
+|---|---|---|---|
+| D | círculo | **hazla sonar**: da vueltas alrededor de la campana y se balancea más | portal |
+| I | subir | **enciende la vela**: lleva las luciérnagas hasta la mecha con tu luz | gravedad invertida |
+| S | barrido horizontal | **sigue la luz**: acompaña con el cursor a un guía que ondula por la pantalla | cinta |
+| N | agitar el cursor | **agita el cielo**: sigue agitando para cargar la estrella | relámpago |
+| E | quedarse quieto | **calma las cuerdas**: quieto, las cuerdas suenan una a una; moverte las espanta | faro |
+| Y | agarrar (mantener) y soltar | **riega la semilla**: mantén para que crezca y suelta para que florezca | constelación-árbol |
+
+Sin fallo ni números: el progreso se ve en la propia luz. Si alguien se atasca, tras ~14 s el juego avanza solo; si se aleja ~7 s, se cierra.
 
 **Inicio de cuento:** al arrancar (y para cada visitante nuevo) una frase se traza con un lápiz de luz antes de poder jugar.
 

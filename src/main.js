@@ -97,7 +97,7 @@ const recognizer = createRecognizer();
 function onGesture(name, trail, info) {
   if (intro?.active() || tutorial?.active()) return; // durante el cuento y el tutorial no se juega
   const r = letters?.handleGesture(name, trail, input, info);
-  if (r?.result === 'conjure') lastSuccessAt = performance.now();
+  if (r?.result === 'conjure' || r?.result === 'game') lastSuccessAt = performance.now();
   if (dev) console.log('[gesto]', name, r ? `-> ${r.letter}: ${r.result} (fin ${Math.round(r.x)},${Math.round(r.y)}; ${r.n} pts; dist ${r.dists})` : '-> ninguna letra');
 }
 
@@ -131,6 +131,18 @@ loadFont().then((font) => {
 }).catch(console.error);
 resize();
 
+// Diagnóstico (dev): avisa de geometrías con posiciones NaN, que three.js no puede dibujar.
+let nanChecked = 0;
+function checkNaN() {
+  scene.traverse((o) => {
+    const pos = o.geometry && o.geometry.attributes && o.geometry.attributes.position;
+    if (!pos) return;
+    for (let i = 0; i < pos.array.length; i++) {
+      if (Number.isNaN(pos.array[i])) { console.warn('[nan]', o.type, 'índice', i, o.parent && o.parent.type, o.userData); return; }
+    }
+  });
+}
+
 renderer.setAnimationLoop(() => {
   const frameStart = performance.now();
   const dt = Math.min(clock.getDelta(), 0.1); // tope: una pestaña dormida no hace saltar nada
@@ -156,6 +168,7 @@ renderer.setAnimationLoop(() => {
   letters?.update(dt * 1000, clock.elapsedTime, input, report.progress);
   if (dev && debugOn) gestureDebug.update(report, now, letters?.states());
   intro?.update(now);
+  if (dev && ++nanChecked % 120 === 0 && nanChecked < 1300) checkNaN();
   // Ayuda por luz: si lleva mucho sin acertar y hay una letra cerca, dibuja su gesto.
   // Tras el cuento arranca el mini-tutorial; mientras corre, la ayuda muestra la letra en turno.
   if (tutorialPending && !intro?.active()) { tutorial.start(now); tutorialPending = false; lastSuccessAt = now; }

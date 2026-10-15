@@ -15,6 +15,7 @@ import { letterShape } from './font.js';
 import { haloTexture, rgb } from './render.js';
 import { rng } from './dust.js';
 import { createIcon } from './icons.js';
+import { GAMES } from './games.js';
 import { createPortal } from './spells/d.js';
 import { createGravity } from './spells/i.js';
 import { createRibbon } from './spells/s.js';
@@ -27,7 +28,7 @@ const SPELLS = { D: createPortal, I: createGravity, S: createRibbon, N: createLi
 
 export const STATE = {
   LATENT: 'latent', SENSITIVE: 'sensitive', LISTENING: 'listening',
-  CONJURED: 'conjured', AWAKE: 'awake',
+  PLAYING: 'playing', CONJURED: 'conjured', AWAKE: 'awake',
 };
 
 const REF_SIZE = 200; // tamaño de em con el que se construye la geometría; luego se escala
@@ -134,6 +135,12 @@ class Letter {
     this.preview = 0;       // 0..1: vista previa del objeto (mini-tutorial)
     this.alwaysLit = false; // el final la deja siempre iluminada
     this.cursor = null;     // {x, y} del cursor, lo pone el reparto cada frame
+    this.input = null;      // la entrada unificada (x, y, vx, vy, grab, active), la pone el reparto
+    this.game = null;       // minijuego de la letra (se crea al abrirlo)
+    this.playT = 0;         // ms jugando el minijuego actual
+    this.farT = 0;          // ms con el cursor lejos durante el minijuego
+    this.gameFill = 0;      // 0..1: relleno que aporta el minijuego
+    this.sway = 0;          // balanceo del cuerpo (radianes; la campana de la D)
     this.beacon = 0;        // 0..1: la guía marca esta letra (late en la oscuridad)
 
     // Hechizo propio de la letra (si existe). Se crea una vez; solo se anima.
@@ -167,11 +174,22 @@ class Letter {
     return Math.hypot(dx, dy);
   }
 
-  // Estira el cuerpo hacia arriba manteniendo fija la base de la letra.
+  // Estira el cuerpo hacia arriba manteniendo fija la base de la letra y, si hay balanceo
+  // (minijuego de la D), lo gira alrededor de su borde superior central.
   setStretch(s) {
     this.body.scale.y = s;
-    this.body.position.y = this.shape.height * (1 - s);
+    const py = this.shape.height * (1 - s);
+    const a = this.sway || 0;
+    if (a === 0) { this.body.rotation.z = 0; this.body.position.set(0, py, 0); return; }
+    const px0 = this.shape.width * 0.5;
+    const c = Math.cos(a), sn = Math.sin(a);
+    this.body.rotation.z = a;
+    this.body.position.set(px0 - px0 * c, py - px0 * sn, 0);
   }
+
+  // Coordenadas: pantalla <-> locales de la letra.
+  toLocal(x, y) { return [(x - this.pos.x) / this.scale, (y - this.pos.y) / this.scale]; }
+  toScreen(lx, ly) { return [this.pos.x + lx * this.scale, this.pos.y + ly * this.scale]; }
 
   set(state) { this.state = state; this.stateT = 0; }
 
@@ -179,8 +197,19 @@ class Letter {
   listen() { this.set(STATE.LISTENING); }
   // `trail` es el trazo del gesto (px de pantalla): algunos hechizos lo usan (p. ej. la cinta).
   conjure(trail, info) { this.set(STATE.CONJURED); this.spell?.start?.(trail, info); }
+  // El gesto abre el minijuego de la letra; al completarlo se conjura el hechizo.
+  openGame(trail, info) {
+    const make = GAMES[this.char];
+    if (!CONFIG.games.enabled || !make) { this.conjure(trail, info); return; }
+    if (!this.game) this.game = make(this);
+    this.gameTrail = trail; this.gameInfo = info;
+    this.playT = 0; this.farT = 0;
+    this.set(STATE.PLAYING);
+    this.game.start?.();
+  }
+  closeGame() { this.game?.stop?.(); this.sway = 0; this.gameFill = 0; }
   awaken() { this.set(STATE.AWAKE); }
-  reset() { this.set(STATE.LATENT); this.spell?.reset(); this.reached.clear(); this.fillOp = 0; this.preview = 0; }
+  reset() { this.closeGame(); this.set(STATE.LATENT); this.spell?.reset(); this.reached.clear(); this.fillOp = 0; this.preview = 0; }
   // Contagio: una letra despierta da un saltito; una dormida se aviva un instante.
   cheer() { this.cheerT = 0; }
   excite() { this.exciteT = 0; }
@@ -204,6 +233,7 @@ class Letter {
     let stretch = 1;
     this.lift = 0;
     this.warmth = 0;
+    if (this.state !== STATE.PLAYING) this.gameFill = 0;
 
     switch (this.state) {
       case STATE.SENSITIVE:
@@ -221,6 +251,30 @@ class Letter {
         pointOp = L.listeningOpacity * 0.6 * pulse;
         tremble = L.trembleAmplitude * 0.5;
         if (k >= 1) this.reset();
+        break;
+      }
+      case STATE.PLAYING: {
+        dustOp = 0.05;
+        // Empujoncito: si se atasca, el juego avanza solo hasta completarse.
+        this.playT += dtMs;
+        const GM = CONFIG.games;
+        const assist = Math.min(1, Math.max(0, (this.playT - GM.assistAfterMs) / GM.assistRampMs));
+        const r = this.game.update(dtMs, timeS, this.input);
+        const prog = Math.max(r.progress, assist);
+        lineOp = Math.max(r.line, 0.3 + 0.5 * assist);
+        pointOp = r.point;
+        this.gameFill = Math.max(r.fill, 0.9 * assist);
+        flashOp = r.flash || 0;
+        color = this.cRose.clone().lerp(this.cAwake, prog);
+        // Se abandona si el cursor se aleja mucho tiempo.
+        const far = !this.cursor || this.distanceTo(this.cursor.x, this.cursor.y) > L.sensitiveRadius * GM.abandonRadius;
+        this.farT = far ? this.farT + dtMs : 0;
+        if (this.farT > GM.abandonMs) { this.closeGame(); this.set(STATE.LATENT); break; }
+        if (r.done || (assist >= 1 && !r.info)) {
+          const info = r.info || this.gameInfo;
+          this.closeGame();
+          this.conjure(this.gameTrail, info);
+        }
         break;
       }
       case STATE.CONJURED: {
@@ -290,14 +344,14 @@ class Letter {
       let fillTarget = 0;
       if (this.state === STATE.AWAKE) fillTarget = 1;
       else if (this.state === STATE.CONJURED) fillTarget = Math.min(1, Math.max(0, (this.progress - 0.55) / 0.45));
-      fillTarget = Math.max(fillTarget, this.preview);
+      fillTarget = Math.max(fillTarget, this.preview, this.gameFill);
       this.fillOp += (fillTarget - this.fillOp) * Math.min(1, (dtMs / 1000) * I.fadeSpeed);
       let light = I.ambient;
       if (this.cursor) {
         const f = Math.max(0, 1 - this.distanceTo(this.cursor.x, this.cursor.y) / I.lightRadius);
         light += (1 - I.ambient) * f ** 1.5;
       }
-      if (this.state === STATE.CONJURED || this.alwaysLit || this.preview > 0) light = Math.max(light, 0.9);
+      if (this.state === STATE.CONJURED || this.state === STATE.PLAYING || this.alwaysLit || this.preview > 0) light = Math.max(light, 0.9);
       light = Math.max(light, cheerP);
       this.icon.update(this.fillOp, light, timeS);
     }
@@ -415,6 +469,7 @@ export function createLetters(font) {
         : Math.max(0, l.chargeLevel - dtMs / 200);
       l.gestureProgress = l === target ? (progress[l.gesture] || 0) : 0;
       l.cursor = input.active ? { x: input.x, y: input.y } : null;
+      l.input = input;
       l.update(dtMs, timeS, l === target);
     }
     chains();
@@ -424,6 +479,7 @@ export function createLetters(font) {
   // final del trazo (gestureTargetMs) toca más de cerca: menor distancia entre un punto
   // del trazo y su caja. Ni el centro ni el inicio sirven: se contaminan con la aproximación.
   function handleGesture(name, trail, input, info) {
+    if (letters.some((x) => x.state === STATE.PLAYING)) return null; // un juego a la vez
     let pts = [{ x: input.x, y: input.y }];
     if (trail && trail.length) {
       const tEnd = trail[trail.length - 1].t;
@@ -443,7 +499,11 @@ export function createLetters(font) {
     const x = pts[pts.length - 1].x, y = pts[pts.length - 1].y;
     const dbg = { x, y, n: pts.length, dists: dists.join(' ') };
     if (!l) return null;
-    if (l.gesture === name) { l.conjure(trail, info); return { letter: l.char, result: 'conjure', ...dbg }; }
+    if (l.gesture === name) {
+      if (CONFIG.games.enabled && GAMES[l.char]) { l.openGame(trail, info); return { letter: l.char, result: 'game', ...dbg }; }
+      l.conjure(trail, info);
+      return { letter: l.char, result: 'conjure', ...dbg };
+    }
     l.listen();
     return { letter: l.char, result: 'listen', ...dbg };
   }

@@ -33,6 +33,51 @@ export const CONFIG = {
     periodMs: 3200,           // lo que tarda el trazo de luz en recorrer el gesto
   },
 
+  // ---------- Minijuegos ----------
+  // El gesto de cada letra ABRE un minijuego; al completarlo se dispara el hechizo. Sin fallo ni
+  // números: el progreso se ve en la propia luz y, si alguien se atasca, el juego se completa solo.
+  games: {
+    enabled: true,
+    assistAfterMs: 14000,     // si lleva tanto en el juego, empieza a avanzar solo ("empujoncito")
+    assistRampMs: 9000,       // lo que tarda ese empujoncito en completar el juego
+    abandonMs: 7000,          // si el cursor se aleja tanto tiempo, el juego se cierra
+    abandonRadius: 2.2,       // "alejarse" = más de esto x letters.sensitiveRadius de la letra
+    bell: {                   // D: hazla sonar (dar vueltas)
+      gain: 0.055,            // energía por radián girado alrededor de la campana
+      decay: 0.10,            // energía que se pierde por segundo si paras
+      maxSwing: 0.55,         // balanceo máximo (radianes)
+      swingHz: 0.9,           // ritmo del balanceo
+    },
+    candle: {                 // I: enciende la vela (llevar luciérnagas a la mecha)
+      fireflies: 5,           // cuántas hay que encender
+      spawnMs: 1100,          // cada cuánto aparece una nueva
+      pullPx: 160,            // a qué distancia del cursor una luciérnaga te sigue
+      pullSpeed: 260,         // qué tan rápido te sigue (px/s)
+      lightPx: 0.3,           // alcance de la mecha (fracción del alto de la letra, en px)
+    },
+    ribbon: {                 // S: sigue la luz
+      speed: 0.16,            // vueltas del guía por segundo (ida y vuelta)
+      tolerance: 80,          // distancia (px) a la que cuenta como "siguiéndola"
+      rate: 0.18,             // progreso por segundo mientras la sigues
+      decay: 0.07,            // lo que se pierde por segundo si la sueltas
+    },
+    star: {                   // N: agita el cielo
+      amplitude: 18,          // vaivén mínimo (px) para contar un sacudido
+      gain: 0.11,             // energía por sacudido
+      decay: 0.14,            // energía que se pierde por segundo
+    },
+    harp: {                   // E: calma las cuerdas
+      speedPx: 28,            // por debajo de esta velocidad (px/s) cuenta como calma
+      rate: 0.2,              // progreso por segundo en calma
+      loss: 0.5,              // lo que se pierde por segundo si te mueves
+    },
+    flower: {                 // Y: riega la semilla (mantener y soltar)
+      rate: 0.45,             // crecimiento por segundo mientras mantienes
+      minGrowth: 0.3,         // si sueltas antes de esto, la semilla se marchita
+      wilt: 0.5,              // qué tan rápido se marchita
+    },
+  },
+
   // ---------- Letras-objeto ----------
   // Al despertar, cada letra se rellena y se convierte en su objeto, con color propio,
   // iluminado por el cursor sobre la oscuridad. El objeto sale del propio relleno de la letra
@@ -66,12 +111,12 @@ export const CONFIG = {
     // palabra, para no revelar DISNEY antes de que las letras despierten.
     order: ['E', 'S', 'D', 'Y', 'I', 'N'],
     steps: {                  // texto de cada paso
-      D: { article: 'la', name: 'campana', label: 'círculo', text: 'Dibuja un círculo' },
-      I: { article: 'la', name: 'vela', label: 'subir', text: 'Sube en línea recta' },
-      S: { article: 'la', name: 'cinta', label: 'barrer', text: 'Barre de lado a lado' },
-      N: { article: 'la', name: 'estrella', label: 'agitar', text: 'Agita el cursor rápido' },
-      E: { article: 'la', name: 'arpa', label: 'quieto', text: 'Quédate quieto un momento' },
-      Y: { article: 'la', name: 'flor', label: 'agarrar', text: 'Mantén el clic y suelta' },
+      D: { article: 'la', name: 'campana', label: 'círculo', text: 'Dibuja un círculo', game: 'Sigue dando vueltas y la campana sonará', hint: 'Si paras, se frena' },
+      I: { article: 'la', name: 'vela', label: 'subir', text: 'Sube en línea recta', game: 'Lleva las luciérnagas hasta la mecha', hint: 'Acércalas con tu luz y súbelas' },
+      S: { article: 'la', name: 'cinta', label: 'barrer', text: 'Barre de lado a lado', game: 'Sigue la luz con el cursor', hint: 'Que no se te escape' },
+      N: { article: 'la', name: 'estrella', label: 'agitar', text: 'Agita el cursor rápido', game: 'Sigue agitando para cargar la estrella', hint: 'Si paras, se apaga' },
+      E: { article: 'la', name: 'arpa', label: 'quieto', text: 'Quédate quieto un momento', game: 'Quédate quieto: las cuerdas irán sonando', hint: 'Moverte las espanta' },
+      Y: { article: 'la', name: 'flor', label: 'agarrar', text: 'Mantén el clic y suelta', game: 'Mantén el clic para regar y suelta para que florezca', hint: 'Si sueltas muy pronto, se marchita' },
     },
   },
 
