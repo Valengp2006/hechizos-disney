@@ -113,7 +113,10 @@ export function createGuide({ letters }) {
     let target = null;
     const inGame = ls.find((l) => l.state === 'playing');
     if (playing) {
-      if (inGame) target = inGame;
+      // El juego en curso manda, salvo que la persona ya esté junto a otra letra pendiente:
+      // entonces la guía pasa a esa (el juego anterior se cierra solo al alejarse).
+      const awayFromGame = !!(inGame && current && current !== inGame && pending.includes(current));
+      if (inGame && !awayFromGame) target = inGame;
       else if (tutLetter) target = tutLetter;
       else if (current && pending.includes(current)) target = current;
       else target = pending[0] || null;

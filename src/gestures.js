@@ -8,6 +8,9 @@
 // Qué número cuenta como "gesto" vive en CONFIG.gestures.
 import { CONFIG } from './config.js';
 
+// Factor sobre la distancia mínima de un trazo recto según su duración real: los gestos lentos
+// (>= 0.7 s) usan el umbral relajado; los breves, uno 1.5 veces mayor.
+const spanFactor = (pts) => (pts.length > 1 && pts[pts.length - 1].t - pts[0].t >= 700 ? 1 : 1.5);
 const bbox = (pts) => {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const p of pts) {
@@ -46,16 +49,20 @@ function measureCircle(pts, cfg) {
   };
 }
 
-// Subir: desplazamiento vertical hacia arriba dominante, poco vaivén y poco ancho.
+// Subir: desplazamiento vertical dominante, poco vaivén y poco ancho. Se acepta hacia arriba o
+// hacia abajo: la gente tiende a "frotar" arriba y abajo, y lo que importa es el trazo vertical.
 function measureRise(pts, cfg) {
   if (pts.length < 2) return { distance: 0, lateral: 0, straight: 0, pass: false };
   const b = bbox(pts);
-  const net = pts[0].y - pts[pts.length - 1].y; // + = hacia arriba (y crece hacia abajo)
+  const net = Math.abs(pts[pts.length - 1].y - pts[0].y);
   const lateral = net > 0 ? b.w / net : Infinity;
   const straight = b.h > 0 ? net / b.h : 0;
+  // Un trazo lento (>= 0.7 s) puede ser corto; uno breve debe ser más largo (si no, el primer
+  // cuarto de un círculo rápido pasaría por trazo recto).
+  const need = cfg.rise.minDistance * spanFactor(pts);
   return {
     distance: net, lateral, straight,
-    pass: net >= cfg.rise.minDistance && lateral <= cfg.rise.maxLateralRatio &&
+    pass: net >= need && lateral <= cfg.rise.maxLateralRatio &&
       straight >= cfg.rise.minStraightness,
   };
 }
@@ -67,9 +74,10 @@ function measureSweep(pts, cfg) {
   const net = Math.abs(pts[pts.length - 1].x - pts[0].x);
   const vertical = net > 0 ? b.h / net : Infinity;
   const straight = b.w > 0 ? net / b.w : 0;
+  const need = cfg.sweep.minDistance * spanFactor(pts);
   return {
     distance: net, vertical, straight,
-    pass: net >= cfg.sweep.minDistance && vertical <= cfg.sweep.maxVerticalRatio &&
+    pass: net >= need && vertical <= cfg.sweep.maxVerticalRatio &&
       straight >= cfg.sweep.minStraightness,
   };
 }
@@ -97,13 +105,14 @@ function measureZigzag(pts, cfg) {
   const cx = reversals(pts.map((p) => p.x), amp);
   const cy = reversals(pts.map((p) => p.y), amp);
   const changes = Math.max(cx, cy);
+  const axis = cy > cx ? 'y' : 'x';   // eje dominante: lo usan la S (lado a lado) y la I (arriba y abajo)
   // Agitar es moverse "en el sitio": el recorrido total es mucho mayor que el desplazamiento
   // neto. Un barrido o un subir con vaivén avanzan hacia algún lado y no cuentan.
   let path = 0;
   for (let i = 1; i < pts.length; i++) path += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
   const net = pts.length > 1 ? Math.hypot(pts[pts.length - 1].x - pts[0].x, pts[pts.length - 1].y - pts[0].y) : 0;
   const inPlace = net < 2 * amp || path / Math.max(1, net) >= cfg.zigzag.minPathRatio;
-  return { changes, inPlace, pass: changes >= cfg.zigzag.minSignChanges && inPlace };
+  return { changes, inPlace, axis, pass: changes >= cfg.zigzag.minSignChanges && inPlace };
 }
 
 export function createRecognizer(cfg = CONFIG.gestures) {
@@ -115,7 +124,9 @@ export function createRecognizer(cfg = CONFIG.gestures) {
   let lastFiredAt = -Infinity;
   let lastMoveT = 0; // último instante con movimiento claro (para el progreso de "quieto")
 
-  const keepMs = Math.max(cfg.windowMs, cfg.still.durationMs) + 100;
+  // Se guarda lo suficiente para la ventana más larga: así un gesto lento también se reconoce.
+  const maxFrac = Math.max(1, ...cfg.windowFractions);
+  const keepMs = Math.max(cfg.windowMs * maxFrac, cfg.still.durationMs) + 100;
 
   function measureStill(now) {
     const span = samples.length ? now - samples[0].t : 0;
@@ -170,18 +181,30 @@ export function createRecognizer(cfg = CONFIG.gestures) {
     }
     while (samples.length && samples[0].t < now - keepMs) samples.shift();
 
-    const win = samples.filter((s) => s.t >= now - cfg.windowMs);
-    // Cada trazo se mide sobre la ventana completa y sobre sufijos más recientes. Pasa si
-    // pasa en alguno; el resultado conserva el trozo que lo cumplió (`trail`).
+    const win = samples.filter((s) => s.t >= now - cfg.windowMs * maxFrac);
+    // Cada trazo se mide en varias ventanas (de la más larga a la más corta); pasa si pasa en
+    // alguna y conserva el trozo que lo cumplió (`trail`). El progreso es el mejor de todas.
     const slices = cfg.windowFractions.map((f) => win.filter((s) => s.t >= now - cfg.windowMs * f));
+    const c1p = (v) => Math.min(1, Math.max(0, v));
+    const progOf = {
+      measureCircle: (m) => c1p(m.angle / cfg.circle.minAngleDeg) * c1p(m.aspect / 0.6) *
+        (m.radius >= cfg.circle.minRadius ? c1p(1 - Math.max(0, m.radiusVar - cfg.circle.radiusTolerance)) : 0),
+      measureRise: (m) => c1p(m.distance / cfg.rise.minDistance) * (m.lateral <= cfg.rise.maxLateralRatio * 1.5 ? 1 : 0.3),
+      measureSweep: (m) => c1p(m.distance / cfg.sweep.minDistance) * (m.vertical <= cfg.sweep.maxVerticalRatio * 1.5 ? 1 : 0.3),
+      measureZigzag: (m) => c1p(m.changes / cfg.zigzag.minSignChanges),
+    };
     const pick = (fn) => {
-      let first = null;
+      let first = null, best = 0, passing = null;
       for (const sl of slices) {
         const m = fn(sl, cfg);
+        const pr = m.pass ? 1 : progOf[fn.name](m);
+        if (pr > best) best = pr;
         if (!first) first = { ...m, trail: sl };
-        if (m.pass) return { ...m, trail: sl };
+        if (m.pass && !passing) passing = { ...m, trail: sl };
       }
-      return first;
+      const out = passing || first;
+      out.bestProgress = best;
+      return out;
     };
     const report = {
       circle: pick(measureCircle),
@@ -194,16 +217,14 @@ export function createRecognizer(cfg = CONFIG.gestures) {
       lastFired, lastFiredAt,
       trail: win,
     };
-    // Progreso 0..1 de cada gesto: cuánto de su umbral va cumpliendo la trayectoria actual.
-    // Sirve para que una letra "escuche" mientras se hace el gesto, antes de completarse.
+    // Progreso 0..1 de cada gesto: el mejor entre todas las ventanas. Sirve para que una letra
+    // "escuche" mientras se hace el gesto, antes de completarse.
     const c1 = (v) => Math.min(1, Math.max(0, v));
-    const rc = report.circle, rr = report.rise, rs = report.sweep, rz = report.zigzag;
     report.progress = {
-      circle: rc.pass ? 1 : c1(rc.angle / cfg.circle.minAngleDeg) * c1(rc.aspect / 0.6) *
-        (rc.radius >= cfg.circle.minRadius ? c1(1 - Math.max(0, rc.radiusVar - cfg.circle.radiusTolerance)) : 0),
-      rise: rr.pass ? 1 : c1(rr.distance / cfg.rise.minDistance) * (rr.lateral <= cfg.rise.maxLateralRatio * 1.5 ? 1 : 0.3),
-      sweep: rs.pass ? 1 : c1(rs.distance / cfg.sweep.minDistance) * (rs.vertical <= cfg.sweep.maxVerticalRatio * 1.5 ? 1 : 0.3),
-      zigzag: c1(rz.changes / cfg.zigzag.minSignChanges),
+      circle: report.circle.bestProgress,
+      rise: report.rise.bestProgress,
+      sweep: report.sweep.bestProgress,
+      zigzag: report.zigzag.bestProgress,
       still: c1((now - lastMoveT) / cfg.still.durationMs),
       grab: 0, // el agarre ya tiene su propia retroalimentación (la semilla de la Y)
     };
@@ -213,12 +234,17 @@ export function createRecognizer(cfg = CONFIG.gestures) {
     // Los trazos rectos (barrido, subir) van antes que agitar: exigen ir recto, así que un
     // barrido con vaivén no se confunde con una sacudida, y una sacudida no pasa por recta.
     const order = ['grab', 'still', 'circle', 'sweep', 'rise', 'zigzag'];
+    // Si lo que se está dibujando es claramente un círculo (progreso alto), los trazos rectos y
+    // agitar esperan: la primera mitad de un círculo se parece a un trazo recto.
+    const drawingCircle = report.circle.bestProgress >= 0.55;
     for (const name of order) {
+      if (drawingCircle && (name === 'sweep' || name === 'rise' || name === 'zigzag')) continue;
       if (report[name].pass) {
         fire(name, now);
         report.lastFired = name;
         report.lastFiredAt = now;
         report.firedTrail = report[name].trail || win; // el trozo que cumplió el gesto
+        report.firedAxis = name === 'zigzag' ? report.zigzag.axis : null;
         return { fired: name, report };
       }
     }

@@ -194,7 +194,7 @@ renderer.setAnimationLoop(() => {
   ghostInput.active = invite;
   ghost.update(ghostInput);
   const { fired, report } = recognizer.push(gameInput, now);
-  if (fired) onGesture(fired, report.firedTrail, { heldMs: report.grab.heldMs });
+  if (fired) onGesture(fired, report.firedTrail, { heldMs: report.grab.heldMs, axis: report.firedAxis });
   letters?.update(dt * 1000, clock.elapsedTime, gameInput, report.progress);
   if (dev && debugOn) gestureDebug.update(report, now, letters?.states());
   // Sonido: cada cambio de estado de una letra y cada fase del final tiene su sonido.

@@ -64,8 +64,8 @@ export const CONFIG = {
     // persona sigue jugando; nunca se completa solo).
     assistAfterMs: 14000,
     assistRampMs: 9000,       // lo que tarda la ayuda en llegar a su máximo
-    abandonMs: 7000,          // si el cursor se aleja tanto tiempo, el juego se cierra
-    abandonRadius: 2.2,       // "alejarse" = más de esto x letters.sensitiveRadius de la letra
+    abandonMs: 2500,          // si el cursor se aleja tanto tiempo, el juego se cierra
+    abandonRadius: 1.4,       // "alejarse" = más de esto x letters.sensitiveRadius de la letra
     bell: {                   // D: hazla sonar (dar vueltas)
       gain: 0.055,            // energía por radián girado alrededor de la campana
       decay: 0.10,            // energía que se pierde por segundo si paras
@@ -142,7 +142,7 @@ export const CONFIG = {
     order: ['E', 'S', 'D', 'Y', 'I', 'N'],
     steps: {                  // texto de cada paso
       D: { article: 'la', name: 'campana', label: 'círculo', text: 'Dibuja un círculo', game: 'Sigue dando vueltas y la campana sonará', hint: 'Si paras, se frena', explicit: 'Mueve el cursor en círculos alrededor de la campana, sin parar' },
-      I: { article: 'la', name: 'vela', label: 'subir', text: 'Sube en línea recta', game: 'Lleva las luciérnagas hasta la mecha', hint: 'Acércalas con tu luz y súbelas', explicit: 'Acerca tu luz a una luciérnaga hasta que te siga y súbela hasta la llama' },
+      I: { article: 'la', name: 'vela', label: 'subir', text: 'Sube y baja en línea recta', game: 'Lleva las luciérnagas hasta la mecha', hint: 'Acércalas con tu luz y súbelas', explicit: 'Acerca tu luz a una luciérnaga hasta que te siga y súbela hasta la llama' },
       S: { article: 'la', name: 'cinta', label: 'barrer', text: 'Barre de lado a lado', game: 'Sigue la luz con el cursor', hint: 'Que no se te escape', explicit: 'Mueve el cursor junto a la luz que ondula por la pantalla, sin alejarte' },
       N: { article: 'la', name: 'estrella', label: 'agitar', text: 'Agita el cursor rápido', game: 'Sigue agitando para cargar la estrella', hint: 'Si paras, se apaga', explicit: 'Sacude el cursor rápido de un lado a otro, como agitándolo' },
       E: { article: 'la', name: 'arpa', label: 'quieto', text: 'Quédate quieto un momento', game: 'Quédate quieto: las cuerdas irán sonando', hint: 'Moverte las espanta', explicit: 'No muevas el cursor: déjalo quieto hasta que suenen las tres cuerdas' },
@@ -259,7 +259,7 @@ export const CONFIG = {
     windowMs: 1000,
     // Fracciones de la ventana en que también se busca un gesto (más recientes). Así un
     // gesto se reconoce en cuanto existe, aunque venga precedido de otro recorrido.
-    windowFractions: [1, 0.7, 0.45],
+    windowFractions: [2.4, 1.6, 1, 0.7, 0.45, 0.3],
     // Tras reconocer un gesto, pausa (ms) sin reconocer otro. Evita que un mismo
     // movimiento dispare dos hechizos o repita el mismo.
     cooldownMs: 700,
@@ -269,12 +269,12 @@ export const CONFIG = {
       minRadius: 30,          // radio medio mínimo (px): un temblor no es un círculo
     },
     rise: {
-      minDistance: 160,       // recorrido vertical mínimo (px) hacia arriba
+      minDistance: 120,       // recorrido vertical mínimo (px), hacia arriba o hacia abajo
       maxLateralRatio: 0.35,  // ancho del trazo / recorrido vertical
       minStraightness: 0.8,   // recorrido neto / alto del trazo (1 = sin vaivén)
     },
     sweep: {
-      minDistance: 240,       // recorrido horizontal mínimo (px)
+      minDistance: 170,       // recorrido horizontal mínimo (px), a cualquier velocidad
       maxVerticalRatio: 0.35, // alto del trazo / recorrido horizontal
       minStraightness: 0.8,   // recorrido neto / ancho del trazo
     },

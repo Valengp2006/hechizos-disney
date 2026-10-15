@@ -174,6 +174,17 @@ class Letter {
     this.pointMat.size = Math.min(8, Math.max(3, spacingPx * 1.4));
   }
 
+  // ¿Este gesto abre esta letra? Además de su gesto, la S acepta agitar de lado a lado y la I
+  // arriba y abajo (la gente "frota" en esa dirección); la N acepta agitar en cualquier eje.
+  accepts(name, info) {
+    if (name === this.gesture) return true;
+    if (name === 'zigzag' && info && info.axis) {
+      if (this.gesture === 'sweep') return info.axis === 'x';
+      if (this.gesture === 'rise') return info.axis === 'y';
+    }
+    return false;
+  }
+
   // Distancia (px) de un punto a la caja de la letra; 0 si está dentro.
   distanceTo(x, y) {
     const w = this.shape.width * this.scale, h = this.shape.height * this.scale;
@@ -495,7 +506,6 @@ export function createLetters(font) {
   // final del trazo (gestureTargetMs) toca más de cerca: menor distancia entre un punto
   // del trazo y su caja. Ni el centro ni el inicio sirven: se contaminan con la aproximación.
   function handleGesture(name, trail, input, info) {
-    if (letters.some((x) => x.state === STATE.PLAYING)) return null; // un juego a la vez
     let pts = [{ x: input.x, y: input.y }];
     if (trail && trail.length) {
       const tEnd = trail[trail.length - 1].t;
@@ -518,13 +528,21 @@ export function createLetters(font) {
       // La preferencia por la letra "que corresponde" se mide donde termina el gesto, no en todo
       // el recorrido (si no, un gesto hecho lejos se asignaría a una letra por la que se pasó).
       const dEnd = c.distanceTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
-      if (c.gesture === name && dEnd <= CONFIG.letters.sensitiveRadius && dEnd < matchD) { match = c; matchD = dEnd; }
+      if (c.accepts(name, info) && dEnd <= CONFIG.letters.sensitiveRadius && dEnd < matchD) { match = c; matchD = dEnd; }
     }
     if (match) l = match;
+    // Un juego a la vez: si ya hay uno abierto, un gesto hecho junto a OTRA letra lo cierra y abre
+    // esa (así se puede pasar a la siguiente letra sin acabar la anterior); si no hay otra
+    // letra cerca, el gesto se ignora.
+    const playing = letters.filter((x) => x.state === STATE.PLAYING);
+    if (playing.length) {
+      if (!l) return null;
+      playing.forEach((p) => { p.closeGame(); p.set(STATE.LATENT); });
+    }
     const x = pts[pts.length - 1].x, y = pts[pts.length - 1].y;
     const dbg = { x, y, n: pts.length, dists: dists.join(' ') };
     if (!l) return null;
-    if (l.gesture === name) {
+    if (l.accepts(name, info)) {
       if (CONFIG.games.enabled && GAMES[l.char]) { l.openGame(trail, info); return { letter: l.char, result: 'game', ...dbg }; }
       l.conjure(trail, info);
       return { letter: l.char, result: 'conjure', ...dbg };
