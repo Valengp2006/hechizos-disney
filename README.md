@@ -30,7 +30,7 @@ Cuando las seis despiertan, convergen en DISNEY, hay un silencio y aparece un ca
 ## Uso
 
 ```bash
-npm install --ignore-scripts   # ml5 trae un postinstall (patch-package) que no hace falta
+npm install
 npm run dev                    # http://localhost:5173
 npm run build                  # dist/ para GitHub Pages (se despliega solo al hacer push a main)
 ```

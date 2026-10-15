@@ -24,8 +24,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      # --ignore-scripts: el postinstall de ml5 (patch-package) falla y no hace falta.
-      - run: npm ci --ignore-scripts
+      - run: npm ci
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

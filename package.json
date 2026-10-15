@@ -9,7 +9,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "ml5": "^1.4.0",
     "opentype.js": "^2.0.0",
     "three": "^0.186.1"
   },

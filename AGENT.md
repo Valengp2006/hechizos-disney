@@ -49,7 +49,7 @@ Unidad 7 del curso (12.5% de la nota): un **sistema tipográfico jugable** hecho
 ```
 
 - **Mouse:** posición del cursor; `grab` = click sostenido.
-- **Mano (ml5.js HandPose):** punta del índice como punto; `grab` = pellizco (distancia pulgar–índice por debajo de un umbral).
+- **Mano (pendiente; librería por decidir entre MediaPipe Hands directo y ml5 HandPose):** punta del índice como punto; `grab` = pellizco (distancia pulgar–índice por debajo de un umbral).
 - Conviven: si la mano está presente, manda la mano; si no, el mouse.
 - La mano necesita **suavizado** (los landmarks tiemblan y la velocidad es parte de la mecánica; un filtro tipo lerp o One Euro), **espejo** en el eje x y un punto de luz como única representación visual.
 
@@ -122,8 +122,8 @@ Para la bitácora, cada cambio de parámetro se registra como **hipótesis antes
 
 ## 7. Stack y estructura del repo
 
-- **Vite** (vanilla JS, módulos ES) + **three.js** (npm; render 2D con cámara ortográfica, partículas y líneas con `AdditiveBlending`) + **opentype.js** (contornos y muestreo de la tipografía) + **ml5.js** (HandPose).
-- **Verifica la API actual de ml5 HandPose en su documentación antes de implementar**; cambia entre versiones.
+- **Vite** (vanilla JS, módulos ES) + **three.js** (npm; render 2D con cámara ortográfica, partículas y líneas con `AdditiveBlending`) + **opentype.js** (contornos y muestreo de la tipografía) + una librería de detección de mano **por decidir** (entrada por mano pospuesta; hoy solo mouse).
+- **Cuando se retome la mano:** verificar la API vigente de la librería elegida en su documentación; cambia entre versiones. MediaPipe Hands directo es más liviano que ml5 (que arrastra TensorFlow.js y un postinstall con `patch-package`).
 - Tipografía **local** en `public/fonts/` con licencia libre (OFL). **Aún sin elegir.** Candidatas: Cormorant Garamond, Cinzel, Playfair Display. Probar "DISNEY" en mayúsculas con cada una y mirar si astas y remates se prestan a convertirse en torres.
 - La cámara exige **HTTPS** (GitHub Pages lo cumple; en local, `localhost` también). No se guarda ni se transmite nada de la cámara.
 - Debe poder desplegarse en **GitHub Pages**.
@@ -142,7 +142,7 @@ Para la bitácora, cada cambio de parámetro se registra como **hipótesis antes
 │   ├── config.js          # TODOS los parámetros
 │   ├── font.js            # fuente, contornos, muestreo de puntos
 │   ├── input.js           # entrada unificada (mouse + mano)
-│   ├── hand.js            # ml5 HandPose, suavizado, espejo, pellizco
+│   ├── hand.js            # (pendiente) detección de mano, suavizado, espejo, pellizco
 │   ├── gestures.js        # reconocimiento de gestos por trayectoria
 │   ├── letter.js          # letra: estados y transiciones
 │   ├── spells/            # un archivo por hechizo (d.js, i.js, s.js, n.js, e.js, y.js)
@@ -161,7 +161,7 @@ Es una propuesta: si algo se ve mejor distinto, proponlo y explica por qué ante
 
 Valen quiere **prototipar las seis letras**. Primero toda la tubería (entrada, gestos, estados) y luego los seis hechizos a nivel de prototipo, para pulir después con el resto del tiempo. Trabaja **un hito por vez**, deja que Valen lo pruebe en el navegador y espera su visto bueno. Un commit por hito.
 
-1. **Repo y esqueleto:** `git init`, Vite + three.js + opentype.js + ml5, `.gitignore`, README básico, canvas oscuro a pantalla completa, estructura de carpetas, `config.js` con la lista de parámetros.
+1. **Repo y esqueleto:** `git init`, Vite + three.js + opentype.js, `.gitignore`, README básico, canvas oscuro a pantalla completa, estructura de carpetas, `config.js` con la lista de parámetros.
 2. **Tipografía y muestreo:** cargar una fuente provisional, extraer contornos de las seis letras y muestrear puntos. Modo de depuración que dibuja contornos y puntos.
 3. **Punto de luz con mouse:** entrada unificada (`input.js`), punto con estela, polvo ambiental casi invisible.
 4. **Reconocedor de gestos:** los seis gestos sobre la trayectoria, con panel de depuración. Verificar cada uno con el mouse antes de seguir.
@@ -181,7 +181,7 @@ Valen quiere **prototipar las seis letras**. Primero toda la tubería (entrada, 
 
 ## 10. Cómo trabajar con Valen
 
-- Valen está en 6.º semestre de Ingeniería en Diseño de Entretenimiento Digital (UPB) y viene de proyectos con p5.js, ml5.js y Three.js; este proyecto se hace en **three.js**. Puede seguir código, pero **tiene que poder explicarlo**: comenta el *porqué* de cada regla, no solo el qué.
+- Valen está en 6.º semestre de Ingeniería en Diseño de Entretenimiento Digital (UPB) y viene de proyectos con p5.js, ml5.js y Three.js (ml5 ya no es dependencia del repo); este proyecto se hace en **three.js**. Puede seguir código, pero **tiene que poder explicarlo**: comenta el *porqué* de cada regla, no solo el qué.
 - Código simple y legible antes que ingenioso. Funciones pequeñas con nombres que reflejen el modelo (`conjure`, `awaken`, `listen`, `converge`).
 - Cada regla del sistema debe localizarse en un solo lugar y ajustarse desde `config.js`.
 - No agregues dependencias sin preguntar.
