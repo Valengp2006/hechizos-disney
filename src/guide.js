@@ -121,7 +121,17 @@ export function createGuide({ letters }) {
 
     // Para no tocar el DOM cada frame, solo se reescribe cuando cambia algo.
     const gaming = !!(target && target.state === 'playing');
-    const key = [phase, target ? target.char : '-', near ? 1 : 0, gaming ? 1 : 0, tutPhase || '-', doneSet.join('')].join('|');
+    // Indicación viva mientras se juega: acompaña a la persona, no juega por ella.
+    let coach = '';
+    if (gaming) {
+      const s0 = G.steps[target.char];
+      if (target.assistLevel > 0.3) coach = 'Te lo pongo un poco más fácil: sigue intentándolo';
+      else if (target.gameProgress > 0.7) coach = '¡Casi! No pares';
+      else if (target.gameTrend > 0.02) coach = 'Vas bien, sigue así';
+      else if (target.gameProgress > 0.05) coach = s0.hint;
+      else coach = s0.hint;
+    }
+    const key = [phase, target ? target.char : '-', near ? 1 : 0, gaming ? 1 : 0, tutPhase || '-', coach, doneSet.join('')].join('|');
     if (key !== sig) {
       sig = key;
       const n = doneSet.filter(Boolean).length;
@@ -145,12 +155,12 @@ export function createGuide({ letters }) {
         if (tutLetter && tutPhase) {
           // Mini-tutorial: primero cómo se abre y luego cómo se juega.
           stepEl.textContent = `Así se despierta ${s.article} ${s.name}`;
-          bigEl.textContent = tutPhase === 'open' ? `1 · ${s.text}` : `2 · ${s.game}`;
-          smallEl.textContent = tutPhase === 'open' ? 'Con este gesto se abre su juego.' : `${s.hint} · clic para saltar`;
+          bigEl.textContent = s.text;
+          smallEl.textContent = 'Con este gesto se abre su juego · clic para saltar';
         } else {
           stepEl.textContent = `${n} de ${ls.length} despiertas · ${gaming ? 'jugando con' : 'ahora:'} ${s.article} ${s.name}`;
           bigEl.textContent = gaming ? s.game : s.text;
-          smallEl.textContent = gaming ? s.hint
+          smallEl.textContent = gaming ? coach
             : (near ? 'Hazlo aquí, junto a la letra.' : 'Acércate a la letra que late en la oscuridad.');
         }
       }

@@ -48,6 +48,7 @@ let tutorial = null;
 let guide = null;
 let tutorialPending = false;
 let lastSuccessAt = performance.now(); // último acierto (para decidir cuándo ayudar)
+let nearSince = 0;                      // desde cuándo está cerca de la letra del paso actual
 let forceHelp = false;                  // dev: tecla H muestra la ayuda al instante // se crea al cargar la fuente; declarado antes de onModeChange, que llama a syncDebug al registrarse
 let debugOn = true;
 const gestureDebug = createGestureDebug();
@@ -165,7 +166,6 @@ renderer.setAnimationLoop(() => {
   ghostInput.x = window.innerWidth * (0.5 + 0.3 * Math.sin(t * 0.31));
   ghostInput.y = window.innerHeight * (0.5 + 0.25 * Math.sin(t * 0.47 + 1));
   ghostInput.active = invite;
-  if (tut && tut.ghost) { ghostInput.x = tut.ghost.x; ghostInput.y = tut.ghost.y; ghostInput.active = true; }
   ghost.update(ghostInput);
   const { fired, report } = recognizer.push(input, now);
   if (fired) onGesture(fired, report.firedTrail, { heldMs: report.grab.heldMs });
@@ -186,8 +186,13 @@ renderer.setAnimationLoop(() => {
     phase: finale?.phase() ?? 'play', hidden: !!intro?.active(),
   });
   letters?.letters.forEach((l) => { l.beacon = CONFIG.guide.beacon && l === guideTarget && !tutLetter ? 1 : 0; });
-  if (tutLetter) help?.update(now, dt * 1000, tutLetter, tut.phase === 'open');
-  else help?.update(now, dt * 1000, cur && cur.gesture ? cur : null, stuck || forceHelp);
+  // El gesto se dibuja junto a la letra del paso actual cuando la persona lleva un rato cerca sin
+  // abrirla: es una guía, no una demostración; quien lo hace es la persona.
+  const nearGuide = !!(cur && cur === guideTarget && cur.state !== 'playing');
+  nearSince = nearGuide ? (nearSince || now) : 0;
+  const showNear = nearSince > 0 && now - nearSince > CONFIG.help.nearMs;
+  if (tutLetter) help?.update(now, dt * 1000, tutLetter, true);
+  else help?.update(now, dt * 1000, cur && cur.gesture ? cur : null, stuck || forceHelp || showNear);
   renderer.render(scene, camera);
   tickPanel(performance.now() - frameStart); // incluye la lógica y el envío de dibujo
 });

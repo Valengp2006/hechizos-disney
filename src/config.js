@@ -27,7 +27,8 @@ export const CONFIG = {
 
   // ---------- Ayuda por luz (si la persona se atasca) ----------
   help: {
-    afterMs: 20000,           // sin despertar ninguna letra durante este tiempo -> dibuja el gesto
+    afterMs: 20000,           // (si la guía fija está apagada) sin despertar nada -> dibuja el gesto
+    nearMs: 2500,             // junto a la letra del paso actual sin abrirla durante esto -> dibuja su gesto
     opacity: 0.6,             // brillo máximo del pictograma (0..1)
     sizeRatio: 0.13,          // tamaño del pictograma (fracción del lado de referencia)
     periodMs: 3200,           // lo que tarda el trazo de luz en recorrer el gesto
@@ -38,8 +39,10 @@ export const CONFIG = {
   // números: el progreso se ve en la propia luz y, si alguien se atasca, el juego se completa solo.
   games: {
     enabled: true,
-    assistAfterMs: 14000,     // si lleva tanto en el juego, empieza a avanzar solo ("empujoncito")
-    assistRampMs: 9000,       // lo que tarda ese empujoncito en completar el juego
+    // Ayuda: si lleva tanto tiempo jugando sin lograrlo, el reto se vuelve más permisivo (la
+    // persona sigue jugando; nunca se completa solo).
+    assistAfterMs: 14000,
+    assistRampMs: 9000,       // lo que tarda la ayuda en llegar a su máximo
     abandonMs: 7000,          // si el cursor se aleja tanto tiempo, el juego se cierra
     abandonRadius: 2.2,       // "alejarse" = más de esto x letters.sensitiveRadius de la letra
     bell: {                   // D: hazla sonar (dar vueltas)
@@ -122,12 +125,12 @@ export const CONFIG = {
 
   // ---------- Mini-tutorial (tras el cuento) ----------
   // Cada letra, en el orden de la palabra, muestra su objeto y dibuja su gesto con luz.
+  // La persona es quien juega: esto solo muestra el objeto y el gesto de cada letra, no juega.
   tutorial: {
-    enabled: true,
+    enabled: false,           // la guía fija y el pictograma al acercarse ya acompañan cada paso
     enabledInDev: false,      // en dev se salta (salvo ?intro); la tecla T lo lanza
-    openMs: 1500,             // por letra: se muestra su objeto y el gesto que la abre
-    playMs: 3200,             // por letra: su minijuego corre solo, con un cursor fantasma jugándolo
-    gapMs: 250,               // pausa entre una letra y la siguiente (el orden es guide.order)
+    openMs: 1700,             // por letra: se muestra su objeto y el gesto que la abre
+    gapMs: 200,               // pausa entre una letra y la siguiente (el orden es guide.order)
   },
 
   // ---------- Modo ----------

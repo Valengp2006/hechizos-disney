@@ -2,7 +2,9 @@
 // dispara el hechizo. Reglas comunes: sin fallo ni números (el progreso se ve en la luz), todo
 // determinista (el "azar" decorativo sale de funciones fijas) y siempre se puede abandonar.
 //
-// Cada juego es createXGame(letter) -> { start(), update(dtMs, t, input), stop() }.
+// Cada juego es createXGame(letter) -> { start(), update(dtMs, t, input, ease), stop() }.
+// `ease` (0..1) es la ayuda: si la persona se atasca, el reto se vuelve más permisivo; nunca se
+// completa solo: quien juega es la persona.
 // update devuelve { progress 0..1, line, point, fill, flash, done, info? } y la letra aplica
 // eso a su contorno, puntos y relleno. Todo se dibuja en coordenadas locales de la letra.
 import * as THREE from 'three';
@@ -47,7 +49,7 @@ export function createBellGame(letter) {
 
   return {
     start() { energy = Math.max(energy, 0.1); lastPhi = null; },
-    update(dtMs, t, input) {
+    update(dtMs, t, input, ease = 0) {
       const dt = dtMs / 1000;
       const sc = letter.scale;
       const cx = letter.pos.x + (w * sc) / 2, cy = letter.pos.y + (h * sc) / 2;
@@ -58,11 +60,11 @@ export function createBellGame(letter) {
         if (lastPhi !== null && dist > 24 && dist < reach) {
           let d = phi - lastPhi;
           if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU;
-          energy += Math.abs(d) * G.gain; // girar alrededor de la campana la empuja
+          energy += Math.abs(d) * G.gain * (1 + 2 * ease); // girar alrededor de la campana la empuja
         }
         lastPhi = phi;
       } else lastPhi = null;
-      energy = clamp01(energy - G.decay * dt);
+      energy = clamp01(energy - G.decay * (1 - 0.6 * ease) * dt);
 
       // La campana cuelga del centro de arriba y se balancea más cuanto más energía.
       const amp = G.maxSwing * energy ** 0.8;
@@ -101,7 +103,7 @@ export function createCandleGame(letter) {
 
   return {
     start() { timer = 0; },
-    update(dtMs, t, input) {
+    update(dtMs, t, input, ease = 0) {
       const dt = dtMs / 1000, sc = letter.scale;
       timer -= dtMs;
       const alive = fl.filter((f) => f.alive).length;
@@ -112,14 +114,14 @@ export function createCandleGame(letter) {
           x: (0.5 + (hash(spawned) - 0.5) * 3.4) * w,
           y: h * (1.5 + hash(spawned, 1) * 0.8),
         });
-        spawned++; timer = G.spawnMs;
+        spawned++; timer = G.spawnMs * (1 - 0.4 * ease);
       }
       const wx = 0.5 * w, wy = -0.06 * h;     // la mecha
       const [cxL, cyL] = input && input.active ? letter.toLocal(input.x, input.y) : [null, null];
       fl.forEach((f) => {
         if (!f.alive) return;
         const toCur = cxL !== null ? Math.hypot(cxL - f.x, cyL - f.y) * sc : Infinity;
-        if (toCur < G.pullPx) {              // te sigue si la acercas con tu luz
+        if (toCur < G.pullPx * (1 + ease)) { // te sigue si la acercas con tu luz
           const k = Math.min(1, (G.pullSpeed * dt) / Math.max(1, toCur));
           f.x += (cxL - f.x) * k; f.y += (cyL - f.y) * k;
         } else {                              // si no, divaga
@@ -127,7 +129,7 @@ export function createCandleGame(letter) {
           f.y += (Math.cos(t * 0.7 + f.ph) * 16 * dt) / sc;
         }
         f.y = Math.min(f.y, h * 2.6);
-        if (Math.hypot(f.x - wx, f.y - wy) * sc < G.lightPx * h * sc) { f.alive = false; lit++; flash = 1; }
+        if (Math.hypot(f.x - wx, f.y - wy) * sc < G.lightPx * (1 + 0.6 * ease) * h * sc) { f.alive = false; lit++; flash = 1; }
       });
       flash *= Math.exp(-dt * 4);
 
@@ -171,7 +173,7 @@ export function createRibbonGame(letter) {
 
   return {
     start() { progress = Math.max(progress, 0.05); hist.length = 0; },
-    update(dtMs, t, input) {
+    update(dtMs, t, input, ease = 0) {
       const dt = dtMs / 1000;
       const W = window.innerWidth;
       const Hu = window.innerHeight * (1 - (CONFIG.guide.enabled ? CONFIG.guide.reserve : 0));
@@ -179,8 +181,8 @@ export function createRibbonGame(letter) {
       const yc = Math.min(0.58 * Hu, Math.max(0.18 * Hu, cyS));
       const [lx, ly] = leader(t * G.speed, yc, Hu, W);
       lastLeader = [lx, ly];
-      const following = input && input.active && Math.hypot(input.x - lx, input.y - ly) < G.tolerance;
-      progress = clamp01(progress + (following ? G.rate : -G.decay) * dt);
+      const following = input && input.active && Math.hypot(input.x - lx, input.y - ly) < G.tolerance * (1 + 0.8 * ease);
+      progress = clamp01(progress + (following ? G.rate * (1 + ease) : -G.decay * (1 - 0.7 * ease)) * dt);
 
       // El camino (tenue, se enciende con el progreso) y el guía con su estela.
       for (let i = 0; i < path.n; i++) {
@@ -202,7 +204,6 @@ export function createRibbonGame(letter) {
         flash: following ? 0.15 * progress : 0, done: progress >= 1,
       };
     },
-    leader: () => lastLeader,
     stop() { path.clear(); guide.clear(); progress = 0; hist.length = 0; lastLeader = null; },
   };
 }
@@ -214,12 +215,12 @@ export function createStarGame(letter) {
   const centre = pointsLayer(letter, 3, 30);
   const sparks = pointsLayer(letter, 40, 9);
   const S = [];
-  let energy = 0, count = 0, flash = 0;
+  let energy = 0, count = 0, flash = 0, ampNow = G.amplitude;
   const ax = { x: { ext: null, dir: 0 }, y: { ext: null, dir: 0 } };
 
   // Cuenta un sacudido cada vez que el cursor invierte su sentido tras recorrer `amplitude`.
   function reversal(axis, v) {
-    const a = ax[axis], amp = G.amplitude;
+    const a = ax[axis], amp = ampNow;
     if (a.ext === null) { a.ext = v; return false; }
     if (a.dir === 0) {
       if (Math.abs(v - a.ext) >= amp) { a.dir = Math.sign(v - a.ext); a.ext = v; }
@@ -237,12 +238,13 @@ export function createStarGame(letter) {
 
   return {
     start() { ax.x.ext = ax.y.ext = null; },
-    update(dtMs, t, input) {
+    update(dtMs, t, input, ease = 0) {
       const dt = dtMs / 1000;
+      ampNow = G.amplitude / (1 + 0.6 * ease);
       if (input && input.active) {
         const rx = reversal('x', input.x), ry = reversal('y', input.y);
         if (rx || ry) {
-          energy = clamp01(energy + G.gain);
+          energy = clamp01(energy + G.gain * (1 + ease));
           flash = 1;
           const [lx, ly] = letter.toLocal(input.x, input.y);
           for (let k = 0; k < 5; k++) {          // chispas que salen del cursor
@@ -252,7 +254,7 @@ export function createStarGame(letter) {
           count++;
         }
       }
-      energy = clamp01(energy - G.decay * dt);
+      energy = clamp01(energy - G.decay * (1 - 0.6 * ease) * dt);
       flash *= Math.exp(-dt * 5);
       for (let i = S.length - 1; i >= 0; i--) {
         const s = S[i];
@@ -290,10 +292,10 @@ export function createHarpGame(letter) {
 
   return {
     start() { calm = Math.max(calm, 0.05); },
-    update(dtMs, t, input) {
+    update(dtMs, t, input, ease = 0) {
       const dt = dtMs / 1000;
       const speed = input && input.active ? Math.hypot(input.vx || 0, input.vy || 0) : 1e9;
-      calm = clamp01(calm + (speed < G.speedPx ? G.rate : -G.loss) * dt);
+      calm = clamp01(calm + (speed < G.speedPx * (1 + 1.5 * ease) ? G.rate * (1 + ease) : -G.loss * (1 - 0.6 * ease)) * dt);
 
       // Tres cuerdas (los brazos de la E): se encienden de a una al ir creciendo la calma.
       const ys = [0.1, 0.5, 0.9];
@@ -335,15 +337,15 @@ export function createFlowerGame(letter) {
 
   return {
     start() { growth = 0; was = false; },
-    update(dtMs, t, input) {
+    update(dtMs, t, input, ease = 0) {
       const dt = dtMs / 1000;
       const holding = !!(input && input.active && input.grab);
       let done = false, info;
       if (holding) {
-        growth = clamp01(growth + G.rate * dt);
+        growth = clamp01(growth + G.rate * (1 + ease) * dt);
         was = true;
       } else {
-        if (was && growth >= G.minGrowth) {      // soltó a tiempo: florece
+        if (was && growth >= G.minGrowth * (1 - 0.4 * ease)) { // soltó a tiempo: florece
           done = true;
           info = { heldMs: growth * CONFIG.spells.chargeMs };
         } else if (was) growth = clamp01(growth - G.wilt * dt * 2); // soltó muy pronto: se marchita

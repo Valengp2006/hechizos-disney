@@ -24,7 +24,7 @@ Cada letra se descubre en **tres tiempos**: el **gesto** la abre, un **minijuego
 | E | quedarse quieto | **calma las cuerdas**: quieto, las cuerdas suenan una a una; moverte las espanta | faro |
 | Y | agarrar (mantener) y soltar | **riega la semilla**: mantén para que crezca y suelta para que florezca | constelación-árbol |
 
-Sin fallo ni números: el progreso se ve en la propia luz. Si alguien se atasca, tras ~14 s el juego avanza solo; si se aleja ~7 s, se cierra.
+Sin fallo ni números: el progreso se ve en la propia luz. **Quien juega es la persona**: si se atasca, tras ~14 s el reto se vuelve más permisivo (nunca se completa solo) y la guía la acompaña con indicaciones vivas; si se aleja ~7 s, el juego se cierra.
 
 **Inicio de cuento:** al arrancar (y para cada visitante nuevo) una frase se traza con un lápiz de luz antes de poder jugar.
 
@@ -40,7 +40,7 @@ Sin fallo ni números: el progreso se ve en la propia luz. Si alguien se atasca,
 
 **Guía siempre visible:** una barra al pie muestra los seis pasos (uno por letra, en el orden de la palabra): los despiertos, encendidos y con una marca; el actual con su gesto animado, qué hacer y dónde (la letra del paso actual **late** en la oscuridad); los pendientes, apagados. Se apaga durante el cuento y, al terminar, cuenta lo que pasa en el final.
 
-**Mini-tutorial:** tras el cuento, cada letra (en un orden que no es el de la palabra) pasa por dos momentos: primero muestra su objeto y el **gesto** que la abre; luego su **minijuego** corre solo, jugado por un cursor fantasma, con la guía explicando "1 · cómo se abre" y "2 · cómo se juega". Un clic lo salta; en dev, la tecla `T` lo lanza.
+**Mini-tutorial (opcional, desactivado):** vista previa del objeto y del gesto de cada letra; nunca juega por la persona. En dev, la tecla `T` lo lanza.
 
 Cuando las seis despiertan, convergen en DISNEY, hay un silencio y aparece un castillo genérico hecho con las propias letras. Tras 30 s sin interacción, todo vuelve a la oscuridad.
 

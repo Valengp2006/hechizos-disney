@@ -141,7 +141,9 @@ class Letter {
     this.farT = 0;          // ms con el cursor lejos durante el minijuego
     this.gameFill = 0;      // 0..1: relleno que aporta el minijuego
     this.sway = 0;          // balanceo del cuerpo (radianes; la campana de la D)
-    this.demo = null;       // {input}: el mini-tutorial hace jugar su minijuego a un cursor fantasma
+    this.gameProgress = 0;  // 0..1: avance del minijuego en curso (lo lee la guía para acompañar)
+    this.gameTrend = 0;     // >0 si va subiendo, <0 si se frena (suavizado)
+    this.assistLevel = 0;   // 0..1: cuánta ayuda está recibiendo el reto
     this.beacon = 0;        // 0..1: la guía marca esta letra (late en la oscuridad)
 
     // Hechizo propio de la letra (si existe). Se crea una vez; solo se anima.
@@ -208,14 +210,8 @@ class Letter {
     this.set(STATE.PLAYING);
     this.game.start?.();
   }
-  closeGame() { this.game?.stop?.(); this.sway = 0; this.gameFill = 0; }
-  // Demostración del minijuego con una entrada falsa (mini-tutorial): no cambia el estado.
-  startDemo(input) {
-    if (!this.game && GAMES[this.char]) this.game = GAMES[this.char](this);
-    this.demo = { input };
-    this.game?.start?.();
-  }
-  stopDemo() { if (this.demo) { this.demo = null; this.closeGame(); } }
+  closeGame() { this.game?.stop?.(); this.sway = 0; this.gameFill = 0; this.gameProgress = 0; this.gameTrend = 0; this.assistLevel = 0; }
+
   awaken() { this.set(STATE.AWAKE); }
   reset() { this.closeGame(); this.set(STATE.LATENT); this.spell?.reset(); this.reached.clear(); this.fillOp = 0; this.preview = 0; }
   // Contagio: una letra despierta da un saltito; una dormida se aviva un instante.
@@ -263,22 +259,27 @@ class Letter {
       }
       case STATE.PLAYING: {
         dustOp = 0.05;
-        // Empujoncito: si se atasca, el juego avanza solo hasta completarse.
+        // Ayuda: si se atasca, el reto se vuelve más permisivo (nunca se completa solo).
         this.playT += dtMs;
         const GM = CONFIG.games;
         const assist = Math.min(1, Math.max(0, (this.playT - GM.assistAfterMs) / GM.assistRampMs));
-        const r = this.game.update(dtMs, timeS, this.input);
-        const prog = Math.max(r.progress, assist);
-        lineOp = Math.max(r.line, 0.3 + 0.5 * assist);
+        this.assistLevel = assist;
+        const before = this.gameProgress;
+        const r = this.game.update(dtMs, timeS, this.input, assist);
+        const prog = r.progress;
+        this.gameProgress = prog;
+        // Tendencia suavizada: sube cuando avanza y baja cuando se frena (la guía la usa).
+        this.gameTrend += ((prog - before) / Math.max(0.001, dtMs / 1000) - this.gameTrend) * Math.min(1, dtMs / 400);
+        lineOp = r.line;
         pointOp = r.point;
-        this.gameFill = Math.max(r.fill, 0.9 * assist);
+        this.gameFill = r.fill;
         flashOp = r.flash || 0;
         color = this.cRose.clone().lerp(this.cAwake, prog);
         // Se abandona si el cursor se aleja mucho tiempo.
         const far = !this.cursor || this.distanceTo(this.cursor.x, this.cursor.y) > L.sensitiveRadius * GM.abandonRadius;
         this.farT = far ? this.farT + dtMs : 0;
         if (this.farT > GM.abandonMs) { this.closeGame(); this.set(STATE.LATENT); break; }
-        if (r.done || (assist >= 1 && !r.info)) {
+        if (r.done) {
           const info = r.info || this.gameInfo;
           this.closeGame();
           this.conjure(this.gameTrail, info);
@@ -325,16 +326,6 @@ class Letter {
       default: break;
     }
 
-    // Demostración (mini-tutorial): el minijuego corre con una entrada falsa y se reinicia al terminar.
-    if (this.demo && this.game &&
-        (this.state === STATE.LATENT || this.state === STATE.SENSITIVE || this.state === STATE.LISTENING)) {
-      const r = this.game.update(dtMs, timeS, this.demo.input);
-      lineOp = Math.max(lineOp, 0.85 * r.line);
-      pointOp = Math.max(pointOp, 0.85 * r.point);
-      this.gameFill = Math.max(this.gameFill, 0.85 * r.fill);
-      flashOp = Math.max(flashOp, r.flash || 0);
-      if (r.done) { this.game.stop?.(); this.game.start?.(); }
-    }
     // Faro de la guía: la letra del paso actual late (polvo más vivo y un fantasma tenue).
     if (this.beacon > 0 && (this.state === STATE.LATENT || this.state === STATE.SENSITIVE)) {
       const bp = this.beacon * (0.5 + 0.5 * Math.sin(timeS * 3.2));
