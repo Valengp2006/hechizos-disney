@@ -92,6 +92,17 @@ export function letterShape(font, char, size) {
   };
 }
 
+// Geometría de una frase entera (con avance y kerning de la fuente), a `size` px de em.
+// Mismo formato que letterShape: origen arriba a la izquierda de la caja del texto.
+export function textShape(font, text, size, spacing = CONFIG.font.sampleSpacing * (size / 200)) {
+  const path = font.getPath(text, 0, 0, size);
+  const bb = path.getBoundingBox();
+  const contours = flatten(path.commands, CONFIG.font.curveSteps);
+  for (const c of contours) for (const p of c.points) { p.x -= bb.x1; p.y -= bb.y1; }
+  const points = contours.flatMap((c) => sampleContour(c, spacing));
+  return { contours, points, width: bb.x2 - bb.x1, height: bb.y2 - bb.y1 };
+}
+
 export function wordShapes(font, word, size) {
   return [...word].map((ch) => letterShape(font, ch, size));
 }

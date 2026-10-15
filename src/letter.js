@@ -458,5 +458,5 @@ export function createLetters(font) {
   const setDebug = (v) => letters.forEach((l) => { l.debug.visible = v; });
   const states = () => letters.map((l) => `${l.char}:${l.state}`).join('  ');
 
-  return { object: group, layout, update, handleGesture, allAwake, reset, lift, warmth, setDebug, states, letters };
+  return { object: group, layout, update, handleGesture, allAwake, reset, lift, warmth, current: () => target, setDebug, states, letters };
 }

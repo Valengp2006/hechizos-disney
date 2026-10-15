@@ -22,10 +22,14 @@ Pantalla casi negra y un punto de luz que sigue al cursor. Las letras no se ven:
 | E | quedarse quieto | amanecer |
 | Y | agarrar (mantener) y soltar | floración |
 
+**Inicio de cuento:** al arrancar (y para cada visitante nuevo) una frase se traza con un lápiz de luz antes de poder jugar.
+
+**Ayuda:** si en ~20 s no despierta ninguna letra, junto a la letra más cercana aparece un trazo de luz que dibuja su gesto (círculo, flecha hacia arriba, barrido, zigzag, anillo que respira o que se recoge).
+
 Cuando las seis despiertan, convergen en DISNEY, hay un silencio y aparece un castillo genérico hecho con las propias letras. Tras 30 s sin interacción, todo vuelve a la oscuridad.
 
 ## Teclas
-`Tab` modo performance/dev · `D` debug (dev) · `F` pantalla completa · `R` apaga las letras (dev) · `W` despierta las seis y dispara el final (dev). También `?dev` en la URL.
+`Tab` modo performance/dev · `D` debug (dev) · `F` pantalla completa · `R` apaga las letras (dev) · `W` despierta las seis y dispara el final (dev) · `H` fuerza el pictograma de ayuda (dev). En la URL: `?dev` arranca en dev y `?intro` fuerza el inicio de cuento en dev. Un clic salta la introducción.
 
 ## Uso
 

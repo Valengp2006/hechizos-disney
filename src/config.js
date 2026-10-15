@@ -3,6 +3,36 @@
 // Cada parámetro dice qué controla y qué esperar si se sube o se baja.
 
 export const CONFIG = {
+  // ---------- Introducción (inicio de cuento) ----------
+  // Decisión consciente: el encargo pide no explicar el juego con texto; esta frase es
+  // narrativa (no da instrucciones) y se registra en la bitácora. Se escribe con la propia
+  // tipografía, como un lápiz de luz que traza cada línea.
+  intro: {
+    enabled: true,
+    enabledInDev: false,      // en dev se salta para probar rápido; ?intro en la URL la fuerza
+    lines: [
+      'Había una vez…',
+      'una palabra dormida en la oscuridad.',
+      'Esperaba a que alguien la hiciera sonreír.',
+    ],
+    startDelayMs: 700,        // oscuridad antes de la primera línea
+    writeMs: 1500,            // cuánto tarda el lápiz de luz en trazar una línea
+    holdMs: 1100,             // cuánto se queda la línea completa
+    fadeMs: 700,              // cuánto tarda en apagarse
+    gapMs: 250,               // pausa entre líneas
+    sizeRatio: 0.075,         // alto de la frase (fracción del lado de referencia de la pantalla)
+    widthRatio: 0.8,          // ancho máximo de la frase (fracción del ancho de pantalla)
+    y: 0.44,                  // altura de la frase (fracción del alto)
+  },
+
+  // ---------- Ayuda por luz (si la persona se atasca) ----------
+  help: {
+    afterMs: 20000,           // sin despertar ninguna letra durante este tiempo -> dibuja el gesto
+    opacity: 0.6,             // brillo máximo del pictograma (0..1)
+    sizeRatio: 0.13,          // tamaño del pictograma (fracción del lado de referencia)
+    periodMs: 3200,           // lo que tarda el trazo de luz en recorrer el gesto
+  },
+
   // ---------- Modo ----------
   mode: {
     // Modo con el que arranca: 'performance' (público) o 'dev' (depuración).

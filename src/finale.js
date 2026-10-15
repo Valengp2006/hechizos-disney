@@ -21,7 +21,7 @@ const ease = (t) => { t = clamp01(t); return t * t * (3 - 2 * t); };
 const smooth = (a, b, v) => ease((v - a) / (b - a));
 const REF = 200; // em de referencia de las letras (ver letter.js)
 
-export function createFinale({ scene, letters }) {
+export function createFinale({ scene, letters, onReset = () => {} }) {
   const F = CONFIG.finale;
   const group = new THREE.Group();
   scene.add(group);
@@ -231,6 +231,7 @@ export function createFinale({ scene, letters }) {
     letters.reset();
     letters.layout(window.innerWidth, window.innerHeight);
     phase = 'play'; t0 = now;
+    onReset(now); // el inicio de cuento vuelve para el siguiente visitante
   }
 
   // Dev: despierta las seis a la vez para probar el final sin jugar todo.

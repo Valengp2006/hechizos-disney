@@ -13,6 +13,8 @@ import { createLightPoint } from './render.js';
 import { createRecognizer } from './gestures.js';
 import { createGestureDebug } from './debug.js';
 import { createFinale } from './finale.js';
+import { createIntro } from './intro.js';
+import { createHelp } from './help.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -27,8 +29,20 @@ const camera = new THREE.OrthographicCamera(0, 1, 0, 1, -1000, 1000);
 
 // El debug solo existe en modo dev; D lo muestra u oculta dentro de dev.
 let dev = false;
+// La introducción es de performance; en dev se salta (salvo ?intro) para probar rápido.
+const introWanted = () =>
+  CONFIG.intro.enabled && (!dev || CONFIG.intro.enabledInDev || new URLSearchParams(location.search).has('intro'));
+function startIntro(now) {
+  if (introWanted()) intro.restart(now); else intro.skip();
+}
+// Un clic salta el cuento (por si alguien ya lo vio).
+window.addEventListener('pointerdown', () => intro?.skip());
 let letters = null;
-let finale = null; // se crea al cargar la fuente; declarado antes de onModeChange, que llama a syncDebug al registrarse
+let finale = null;
+let intro = null;
+let help = null;
+let lastSuccessAt = performance.now(); // último acierto (para decidir cuándo ayudar)
+let forceHelp = false;                  // dev: tecla H muestra la ayuda al instante // se crea al cargar la fuente; declarado antes de onModeChange, que llama a syncDebug al registrarse
 let debugOn = true;
 const gestureDebug = createGestureDebug();
 scene.add(gestureDebug.object);
@@ -41,6 +55,7 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (k === 'd') { debugOn = !debugOn; syncDebug(); }
   if (k === 'r' && dev) letters?.reset(); // dev: apaga todas las letras para volver a probar
+  if (k === 'h' && dev) forceHelp = !forceHelp;   // dev: ver el pictograma de ayuda
   if (k === 'w' && dev) finale?.forceAwakenAll(); // dev: despierta las seis y dispara el final
 });
 
@@ -73,7 +88,9 @@ let lastRealMove = performance.now();
 const recognizer = createRecognizer();
 // Aquí se conectarán las letras (Hito 6): cada gesto reconocido llega con su nombre.
 function onGesture(name, trail, info) {
+  if (intro?.active()) return; // durante el cuento no se juega
   const r = letters?.handleGesture(name, trail, input, info);
+  if (r?.result === 'conjure') lastSuccessAt = performance.now();
   if (dev) console.log('[gesto]', name, r ? `-> ${r.letter}: ${r.result} (fin ${Math.round(r.x)},${Math.round(r.y)}; ${r.n} pts; dist ${r.dists})` : '-> ninguna letra');
 }
 
@@ -93,7 +110,13 @@ window.addEventListener('resize', resize);
 loadFont().then((font) => {
   letters = createLetters(font);
   scene.add(letters.object);
-  finale = createFinale({ scene, letters });
+  finale = createFinale({
+    scene, letters,
+    onReset: (now) => { lastSuccessAt = now; startIntro(now); },
+  });
+  intro = createIntro({ scene, font });
+  help = createHelp({ scene });
+  startIntro(performance.now());
   resize();
   syncDebug();
 }).catch(console.error);
@@ -112,7 +135,7 @@ renderer.setAnimationLoop(() => {
   if (Math.hypot(input.x - lastPx, input.y - lastPy) > 2 || input.grab) lastRealMove = performance.now();
   lastPx = input.x; lastPy = input.y;
   const idleMs = performance.now() - lastRealMove;
-  const invite = finale?.phase() === 'play' && idleMs > CONFIG.visual.attractAfterMs;
+  const invite = finale?.phase() === 'play' && !intro?.active() && idleMs > CONFIG.visual.attractAfterMs;
   const t = clock.elapsedTime;
   ghostInput.x = window.innerWidth * (0.5 + 0.3 * Math.sin(t * 0.31));
   ghostInput.y = window.innerHeight * (0.5 + 0.25 * Math.sin(t * 0.47 + 1));
@@ -123,6 +146,12 @@ renderer.setAnimationLoop(() => {
   if (fired) onGesture(fired, report.firedTrail, { heldMs: report.grab.heldMs });
   letters?.update(dt * 1000, clock.elapsedTime, input, report.progress);
   if (dev && debugOn) gestureDebug.update(report, now, letters?.states());
+  intro?.update(now);
+  // Ayuda por luz: si lleva mucho sin acertar y hay una letra cerca, dibuja su gesto.
+  const stuck = finale?.phase() === 'play' && !intro?.active() && input.active &&
+    now - lastSuccessAt > CONFIG.help.afterMs;
+  const cur = letters?.current();
+  help?.update(now, dt * 1000, cur && cur.gesture ? cur : null, stuck || forceHelp);
   renderer.render(scene, camera);
   tickPanel(performance.now() - frameStart); // incluye la lógica y el envío de dibujo
 });
