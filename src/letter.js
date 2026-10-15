@@ -141,6 +141,7 @@ class Letter {
     this.farT = 0;          // ms con el cursor lejos durante el minijuego
     this.gameFill = 0;      // 0..1: relleno que aporta el minijuego
     this.sway = 0;          // balanceo del cuerpo (radianes; la campana de la D)
+    this.demo = null;       // {input}: el mini-tutorial hace jugar su minijuego a un cursor fantasma
     this.beacon = 0;        // 0..1: la guía marca esta letra (late en la oscuridad)
 
     // Hechizo propio de la letra (si existe). Se crea una vez; solo se anima.
@@ -208,6 +209,13 @@ class Letter {
     this.game.start?.();
   }
   closeGame() { this.game?.stop?.(); this.sway = 0; this.gameFill = 0; }
+  // Demostración del minijuego con una entrada falsa (mini-tutorial): no cambia el estado.
+  startDemo(input) {
+    if (!this.game && GAMES[this.char]) this.game = GAMES[this.char](this);
+    this.demo = { input };
+    this.game?.start?.();
+  }
+  stopDemo() { if (this.demo) { this.demo = null; this.closeGame(); } }
   awaken() { this.set(STATE.AWAKE); }
   reset() { this.closeGame(); this.set(STATE.LATENT); this.spell?.reset(); this.reached.clear(); this.fillOp = 0; this.preview = 0; }
   // Contagio: una letra despierta da un saltito; una dormida se aviva un instante.
@@ -317,6 +325,16 @@ class Letter {
       default: break;
     }
 
+    // Demostración (mini-tutorial): el minijuego corre con una entrada falsa y se reinicia al terminar.
+    if (this.demo && this.game &&
+        (this.state === STATE.LATENT || this.state === STATE.SENSITIVE || this.state === STATE.LISTENING)) {
+      const r = this.game.update(dtMs, timeS, this.demo.input);
+      lineOp = Math.max(lineOp, 0.85 * r.line);
+      pointOp = Math.max(pointOp, 0.85 * r.point);
+      this.gameFill = Math.max(this.gameFill, 0.85 * r.fill);
+      flashOp = Math.max(flashOp, r.flash || 0);
+      if (r.done) { this.game.stop?.(); this.game.start?.(); }
+    }
     // Faro de la guía: la letra del paso actual late (polvo más vivo y un fantasma tenue).
     if (this.beacon > 0 && (this.state === STATE.LATENT || this.state === STATE.SENSITIVE)) {
       const bp = this.beacon * (0.5 + 0.5 * Math.sin(timeS * 3.2));

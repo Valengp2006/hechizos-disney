@@ -161,6 +161,7 @@ export function createRibbonGame(letter) {
   const guide = pointsLayer(letter, 14, 22);
   let progress = 0;
   const hist = [];
+  let lastLeader = null; // posición en pantalla del guía (la usa el mini-tutorial para jugar solo)
 
   // Ida y vuelta en una onda a lo ancho de la pantalla útil (coordenadas de pantalla).
   const leader = (s, yc, Hu, W) => {
@@ -177,6 +178,7 @@ export function createRibbonGame(letter) {
       const cyS = letter.pos.y + (letter.shape.height * letter.scale) / 2;
       const yc = Math.min(0.58 * Hu, Math.max(0.18 * Hu, cyS));
       const [lx, ly] = leader(t * G.speed, yc, Hu, W);
+      lastLeader = [lx, ly];
       const following = input && input.active && Math.hypot(input.x - lx, input.y - ly) < G.tolerance;
       progress = clamp01(progress + (following ? G.rate : -G.decay) * dt);
 
@@ -200,7 +202,8 @@ export function createRibbonGame(letter) {
         flash: following ? 0.15 * progress : 0, done: progress >= 1,
       };
     },
-    stop() { path.clear(); guide.clear(); progress = 0; hist.length = 0; },
+    leader: () => lastLeader,
+    stop() { path.clear(); guide.clear(); progress = 0; hist.length = 0; lastLeader = null; },
   };
 }
 

@@ -125,7 +125,9 @@ export const CONFIG = {
   tutorial: {
     enabled: true,
     enabledInDev: false,      // en dev se salta (salvo ?intro); la tecla T lo lanza
-    slotMs: 2300,             // cuánto se queda cada letra (6 letras); el orden es guide.order
+    openMs: 1500,             // por letra: se muestra su objeto y el gesto que la abre
+    playMs: 3200,             // por letra: su minijuego corre solo, con un cursor fantasma jugándolo
+    gapMs: 250,               // pausa entre una letra y la siguiente (el orden es guide.order)
   },
 
   // ---------- Modo ----------

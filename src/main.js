@@ -158,11 +158,15 @@ renderer.setAnimationLoop(() => {
   const idleMs = performance.now() - lastRealMove;
   const invite = finale?.phase() === 'play' && !intro?.active() && !tutorial?.active() && idleMs > CONFIG.visual.attractAfterMs;
   const t = clock.elapsedTime;
+  const now = performance.now();
+  // Tras el cuento arranca el mini-tutorial; su cursor fantasma juega cada minijuego.
+  if (tutorialPending && !intro?.active()) { tutorial.start(now); tutorialPending = false; lastSuccessAt = now; }
+  const tut = tutorial?.update(now);
   ghostInput.x = window.innerWidth * (0.5 + 0.3 * Math.sin(t * 0.31));
   ghostInput.y = window.innerHeight * (0.5 + 0.25 * Math.sin(t * 0.47 + 1));
   ghostInput.active = invite;
+  if (tut && tut.ghost) { ghostInput.x = tut.ghost.x; ghostInput.y = tut.ghost.y; ghostInput.active = true; }
   ghost.update(ghostInput);
-  const now = performance.now();
   const { fired, report } = recognizer.push(input, now);
   if (fired) onGesture(fired, report.firedTrail, { heldMs: report.grab.heldMs });
   letters?.update(dt * 1000, clock.elapsedTime, input, report.progress);
@@ -170,19 +174,19 @@ renderer.setAnimationLoop(() => {
   intro?.update(now);
   if (dev && ++nanChecked % 120 === 0 && nanChecked < 1300) checkNaN();
   // Ayuda por luz: si lleva mucho sin acertar y hay una letra cerca, dibuja su gesto.
-  // Tras el cuento arranca el mini-tutorial; mientras corre, la ayuda muestra la letra en turno.
-  if (tutorialPending && !intro?.active()) { tutorial.start(now); tutorialPending = false; lastSuccessAt = now; }
-  const tutLetter = tutorial?.update(now);
+  // Durante el mini-tutorial, la ayuda muestra el gesto de la letra en turno (fase "open").
+  const tutLetter = tut ? tut.letter : null;
   // Con la guía siempre visible, el pictograma en escena por atasco sobra (queda el del tutorial).
   const stuck = !CONFIG.guide.enabled && finale?.phase() === 'play' && !intro?.active() && !tutLetter &&
     input.active && now - lastSuccessAt > CONFIG.help.afterMs;
   const cur = letters?.current();
   // Guía fija: dice qué hacer y marca (con un latido) la letra del paso actual.
   const guideTarget = guide?.update({
-    current: cur, tutLetter, phase: finale?.phase() ?? 'play', hidden: !!intro?.active(),
+    current: cur, tutLetter, tutPhase: tut ? tut.phase : null,
+    phase: finale?.phase() ?? 'play', hidden: !!intro?.active(),
   });
   letters?.letters.forEach((l) => { l.beacon = CONFIG.guide.beacon && l === guideTarget && !tutLetter ? 1 : 0; });
-  if (tutLetter) help?.update(now, dt * 1000, tutLetter, true);
+  if (tutLetter) help?.update(now, dt * 1000, tutLetter, tut.phase === 'open');
   else help?.update(now, dt * 1000, cur && cur.gesture ? cur : null, stuck || forceHelp);
   renderer.render(scene, camera);
   tickPanel(performance.now() - frameStart); // incluye la lógica y el envío de dibujo

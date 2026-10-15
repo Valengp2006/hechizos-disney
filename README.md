@@ -40,7 +40,7 @@ Sin fallo ni números: el progreso se ve en la propia luz. Si alguien se atasca,
 
 **Guía siempre visible:** una barra al pie muestra los seis pasos (uno por letra, en el orden de la palabra): los despiertos, encendidos y con una marca; el actual con su gesto animado, qué hacer y dónde (la letra del paso actual **late** en la oscuridad); los pendientes, apagados. Se apaga durante el cuento y, al terminar, cuenta lo que pasa en el final.
 
-**Mini-tutorial:** tras el cuento, cada letra (en el orden de la palabra) muestra su objeto y dibuja su gesto con luz, ~2 s cada una. Un clic lo salta; en dev, la tecla `T` lo lanza.
+**Mini-tutorial:** tras el cuento, cada letra (en un orden que no es el de la palabra) pasa por dos momentos: primero muestra su objeto y el **gesto** que la abre; luego su **minijuego** corre solo, jugado por un cursor fantasma, con la guía explicando "1 · cómo se abre" y "2 · cómo se juega". Un clic lo salta; en dev, la tecla `T` lo lanza.
 
 Cuando las seis despiertan, convergen en DISNEY, hay un silencio y aparece un castillo genérico hecho con las propias letras. Tras 30 s sin interacción, todo vuelve a la oscuridad.
 

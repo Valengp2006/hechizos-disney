@@ -99,7 +99,7 @@ export function createGuide({ letters }) {
   let sig = '';
 
   // `tutLetter`: letra en turno del mini-tutorial; `phase`: fase del final; `hidden`: durante el cuento.
-  function update({ current, tutLetter, phase, hidden }) {
+  function update({ current, tutLetter, tutPhase, phase, hidden }) {
     if (!G.enabled || hidden) { root.style.display = 'none'; return null; }
     root.style.display = 'block';
     // Las letras en el orden de la guía (no el de la palabra).
@@ -121,7 +121,7 @@ export function createGuide({ letters }) {
 
     // Para no tocar el DOM cada frame, solo se reescribe cuando cambia algo.
     const gaming = !!(target && target.state === 'playing');
-    const key = [phase, target ? target.char : '-', near ? 1 : 0, gaming ? 1 : 0, doneSet.join('')].join('|');
+    const key = [phase, target ? target.char : '-', near ? 1 : 0, gaming ? 1 : 0, tutPhase || '-', doneSet.join('')].join('|');
     if (key !== sig) {
       sig = key;
       const n = doneSet.filter(Boolean).length;
@@ -142,10 +142,17 @@ export function createGuide({ letters }) {
         const s = G.steps[target.char];
         pic.innerHTML = PICTO[GESTURE_KEY[target.gesture]] || '';
         // Sin nombrar la letra: se habla del objeto (la campana, la vela...).
-        stepEl.textContent = `${n} de ${ls.length} despiertas · ${gaming ? 'jugando con' : 'ahora:'} ${s.article} ${s.name}`;
-        bigEl.textContent = gaming ? s.game : s.text;
-        smallEl.textContent = gaming ? s.hint
-          : (near ? 'Hazlo aquí, junto a la letra.' : 'Acércate a la letra que late en la oscuridad.');
+        if (tutLetter && tutPhase) {
+          // Mini-tutorial: primero cómo se abre y luego cómo se juega.
+          stepEl.textContent = `Así se despierta ${s.article} ${s.name}`;
+          bigEl.textContent = tutPhase === 'open' ? `1 · ${s.text}` : `2 · ${s.game}`;
+          smallEl.textContent = tutPhase === 'open' ? 'Con este gesto se abre su juego.' : `${s.hint} · clic para saltar`;
+        } else {
+          stepEl.textContent = `${n} de ${ls.length} despiertas · ${gaming ? 'jugando con' : 'ahora:'} ${s.article} ${s.name}`;
+          bigEl.textContent = gaming ? s.game : s.text;
+          smallEl.textContent = gaming ? s.hint
+            : (near ? 'Hazlo aquí, junto a la letra.' : 'Acércate a la letra que late en la oscuridad.');
+        }
       }
     }
     return playing ? target : null;
