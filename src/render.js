@@ -25,7 +25,7 @@ export function haloTexture() {
 }
 
 // Punto de luz del jugador: cabeza brillante + estela que se apaga hacia atrás.
-export function createLightPoint() {
+export function createLightPoint({ dim = 1 } = {}) {
   const n = CONFIG.visual.trailLength;
   const history = Array.from({ length: n }, () => ({ x: 0, y: 0 }));
   const color = rgb(CONFIG.visual.colors.rose);
@@ -62,13 +62,18 @@ export function createLightPoint() {
     }),
   );
 
+  // `dim` (0..1) atenúa toda la luz: la usa la luz-invitación, que debe ser discreta.
+  [mat, line.material, head.material].forEach((m) => { m.opacity = dim; });
   const group = new THREE.Group();
   group.add(trail, line, head);
   group.visible = false;
 
+  let wasActive = false;
   function update(input) {
     group.visible = input.active;
-    if (!input.active) return;
+    if (!input.active) { wasActive = false; return; }
+    // Al aparecer, la estela parte de donde está la luz (no de la esquina de la pantalla).
+    if (!wasActive) { history.forEach((h) => { h.x = input.x; h.y = input.y; }); wasActive = true; }
     // Cada frame: se descarta la muestra más vieja y entra la posición actual.
     history.shift();
     history.push({ x: input.x, y: input.y });

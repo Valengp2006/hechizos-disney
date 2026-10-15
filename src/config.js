@@ -56,6 +56,9 @@ export const CONFIG = {
     glow: 1.2,
     // Largo de la estela del punto de luz (en muestras, 1 por frame). Más = trazos más largos.
     trailLength: 40,
+    // Luz-invitación: cuánto espera sin actividad (ms) antes de pasearse sola, y su brillo 0..1.
+    attractAfterMs: 4000,
+    attractOpacity: 0.35,
     // Tamaño (px) del punto de luz del jugador.
     pointSize: 38,
     // Semilla del polvo: fija dónde nace cada partícula (misma semilla = mismo polvo).
@@ -143,9 +146,11 @@ export const CONFIG = {
     // Polvo tenue que marca la zona de cada letra latente.
     latentDustCount: 36,
     latentDustOpacity: 0.12,
+    // Cuánto insinúa el polvo el gesto de la letra cuando está sensible (0 = nada, 1 = pleno).
+    hintStrength: 0.7,
     // Cuánto tiembla el polvo (px) cuando la letra está sensible, y su brillo extra 0..1.
     trembleAmplitude: 5,
-    sensitiveGain: 0.5,
+    sensitiveGain: 0.45,
     // Brillo máximo del contorno cuando la letra se entreabre (escuchando).
     listeningOpacity: 0.55,
     // Duración del destello placeholder del hechizo (ms); los hechizos reales usan

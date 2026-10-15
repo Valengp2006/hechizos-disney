@@ -53,6 +53,7 @@ class Letter {
     this.lift = 0; // cuánto empuja el hechizo al polvo ambiental (0..1)
     this.warmth = 0; // cuánto dora el hechizo al polvo ambiental (0..1)
     this.chargeLevel = 0; // 0..1: cuánto lleva agarrada la letra (solo Y lo usa)
+    this.hint = 0;        // 0..1: cuánto insinúa el polvo su gesto (letra sensible)
     this.progress = 0;    // 0..1: avance del hechizo mientras está encantada
     this.cheerT = 1e9;    // ms desde el último saltito de alegría (letra despierta)
     this.exciteT = 1e9;   // ms desde el último avivamiento (letra aún dormida)
@@ -139,7 +140,7 @@ class Letter {
     this.pos.y = cy - h / 2;
     this.group.position.set(this.pos.x, this.pos.y, 0);
     this.group.scale.setScalar(this.scale);
-    this.flashMat.size = sizePx * 1.4;
+    this.flashMat.size = Math.min(sizePx * 1.2, 260); // tope: en letras grandes el halo quemaba
   }
 
   // Distancia (px) de un punto a la caja de la letra; 0 si está dentro.
@@ -187,7 +188,7 @@ class Letter {
 
     switch (this.state) {
       case STATE.SENSITIVE:
-        dustOp += L.sensitiveGain * 0.3;
+        dustOp += L.sensitiveGain;
         tremble = L.trembleAmplitude;
         break;
       case STATE.LISTENING: {
@@ -266,14 +267,59 @@ class Letter {
     this.dustMat.opacity = Math.min(1, dustOp);
 
     // Polvo: se estremece (oscila con fase propia) cuando la letra está sensible.
+    // Además, al estar sensible, el polvo insinúa el gesto que la despierta (una pista
+    // sin texto): gira (círculo), sube (subir), se mece (barrido), vibra de lado a lado
+    // (zigzag), respira (quieto) o se recoge (agarrar). `hint` entra y sale con suavidad.
+    const target = this.state === STATE.SENSITIVE ? 1 : 0;
+    this.hint += (target - this.hint) * Math.min(1, (dtMs / 1000) * 4);
     const amp = tremble / this.scale;
     const n = this.dustPhase.length;
+    const w = this.shape.width, h = this.shape.height, cx = w / 2, cy = h / 2;
+    const hintAmt = this.hint * L.hintStrength;
     for (let i = 0; i < n; i++) {
       const ph = this.dustPhase[i];
       const f = tremble > 0 ? 38 : 0.7; // sensible: vibra rápido; latente: respira lento
       const a = tremble > 0 ? amp : 3 / this.scale;
-      this.dustPos[i * 3] = this.dustBase[i * 2] + Math.sin(timeS * f + ph) * a;
-      this.dustPos[i * 3 + 1] = this.dustBase[i * 2 + 1] + Math.cos(timeS * f * 1.3 + ph) * a;
+      let bx = this.dustBase[i * 2], by = this.dustBase[i * 2 + 1];
+      if (hintAmt > 0.001) {
+        let hx = bx, hy = by;
+        switch (this.gesture) {
+          case 'circle': { // el polvo orbita alrededor del centro de la letra
+            const th = timeS * 1.4;
+            const dx = bx - cx, dy = by - cy;
+            hx = cx + dx * Math.cos(th) - dy * Math.sin(th);
+            hy = cy + dx * Math.sin(th) + dy * Math.cos(th);
+            break;
+          }
+          case 'rise': { // sube en ciclos y reaparece abajo
+            const span = h * 1.4;
+            hy = by - ((timeS * 38 + i * 9) % span);
+            break;
+          }
+          case 'sweep': // se mece de lado a lado, todo junto
+            hx = bx + Math.sin(timeS * 2.2) * w * 0.35;
+            break;
+          case 'zigzag': { // vaivén seco: onda triangular rápida
+            const t = (timeS * 3.2 + ph * 0.05) % 1;
+            hx = bx + (Math.abs(t * 2 - 1) - 0.5) * w * 0.5;
+            break;
+          }
+          case 'grab': { // se contrae hacia el centro y se suelta
+            const k = 1 - 0.35 * (0.5 + 0.5 * Math.sin(timeS * 3));
+            hx = cx + (bx - cx) * k; hy = cy + (by - cy) * k;
+            break;
+          }
+          default: break; // 'still': no se mueve (la calma es el gesto); solo respira abajo
+        }
+        bx += (hx - bx) * hintAmt;
+        by += (hy - by) * hintAmt;
+      }
+      this.dustPos[i * 3] = bx + Math.sin(timeS * f + ph) * a;
+      this.dustPos[i * 3 + 1] = by + Math.cos(timeS * f * 1.3 + ph) * a;
+    }
+    // Quieto: en vez de moverse, el polvo respira (brillo) cuando la letra es sensible.
+    if (this.gesture === 'still' && this.hint > 0.01) {
+      this.dustMat.opacity = Math.min(1, this.dustMat.opacity * (0.75 + 0.5 * Math.sin(timeS * 2.2)));
     }
     this.dustGeo.attributes.position.needsUpdate = true;
   }

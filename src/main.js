@@ -51,7 +51,25 @@ initInput();
 const dust = createDust();
 const light = createLightPoint();
 scene.add(dust.object, light.object);
-const clock = new THREE.Clock();
+// Reloj propio (THREE.Clock está en desuso): dt en segundos con tope, y tiempo acumulado.
+const clock = {
+  last: performance.now(),
+  elapsedTime: 0,
+  getDelta() {
+    const now = performance.now();
+    const d = (now - this.last) / 1000;
+    this.last = now;
+    this.elapsedTime += d;
+    return d;
+  },
+};
+
+// Luz-invitación: si nadie juega, una luz tenue pasea despacio por la oscuridad.
+// Cuando alguien mueve el punto de atención, se apaga. Es la única pista de que se puede jugar.
+const ghostInput = { x: 0, y: 0, active: true };
+const ghost = createLightPoint({ dim: CONFIG.visual.attractOpacity });
+scene.add(ghost.object);
+let lastRealMove = performance.now();
 const recognizer = createRecognizer();
 // Aquí se conectarán las letras (Hito 6): cada gesto reconocido llega con su nombre.
 function onGesture(name, trail, info) {
@@ -59,6 +77,7 @@ function onGesture(name, trail, info) {
   if (dev) console.log('[gesto]', name, r ? `-> ${r.letter}: ${r.result} (fin ${Math.round(r.x)},${Math.round(r.y)}; ${r.n} pts; dist ${r.dists})` : '-> ninguna letra');
 }
 
+let lastPx = -1, lastPy = -1;
 function resize() {
   const w = window.innerWidth;
   const h = window.innerHeight;
@@ -89,6 +108,16 @@ renderer.setAnimationLoop(() => {
   dust.setWarmth(Math.max(letters?.warmth() ?? 0, finale?.warmth() ?? 0));
   dust.update(dt, clock.elapsedTime, input);
   light.update(input);
+  // Invitación: pasea en una curva fija (Lissajous) y solo si nadie ha jugado hace un rato.
+  if (Math.hypot(input.x - lastPx, input.y - lastPy) > 2 || input.grab) lastRealMove = performance.now();
+  lastPx = input.x; lastPy = input.y;
+  const idleMs = performance.now() - lastRealMove;
+  const invite = finale?.phase() === 'play' && idleMs > CONFIG.visual.attractAfterMs;
+  const t = clock.elapsedTime;
+  ghostInput.x = window.innerWidth * (0.5 + 0.3 * Math.sin(t * 0.31));
+  ghostInput.y = window.innerHeight * (0.5 + 0.25 * Math.sin(t * 0.47 + 1));
+  ghostInput.active = invite;
+  ghost.update(ghostInput);
   const now = performance.now();
   const { fired, report } = recognizer.push(input, now);
   if (fired) onGesture(fired, report.firedTrail, { heldMs: report.grab.heldMs });
