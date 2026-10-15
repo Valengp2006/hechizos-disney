@@ -1,29 +1,32 @@
-// spells/d.js — Hechizo de la D: CAMPANADA DE LUZ (gesto: círculo).
+// spells/d.js — Hechizo de la D: PORTAL (gesto: círculo).
 //
-// La D se alegra: su contorno se repite hacia afuera en ondas, como el eco de una
-// campana, y de su panza salen luciérnagas que se reparten en espiral y se quedan
-// revoloteando. Todo sale de la D: su contorno repetido y puntos de su propio trazo.
+// La panza de la D se abre y su propio contorno se repite hacia el fondo, cada copia
+// más pequeña y girada que la anterior, hasta un punto de fuga dentro de la letra.
+// Todo sale de la D: solo copias escaladas y rotadas de su contorno y sus puntos.
 //
 // Línea de tiempo (k = 0..1 sobre spells.durationMs.D):
-//   cada onda nace en k = i * bellStagger y vive bellRingLife; las luciérnagas salen
-//   escalonadas y llegan a su sitio de reposo; la letra queda dorada y respirando.
-// Determinista: ángulo, radio, retraso y fase de cada luciérnaga salen de su índice.
+//   0 – 0.25  apertura: el túnel se despliega (más copias y más giro)
+//   0.25–0.75 túnel: las copias "caen" hacia el fondo sin parar
+//   0.75–1    cierre: el túnel se recoge y queda una copia pequeña girando
+// Determinista: la escala y el giro de cada copia dependen solo de su profundidad.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { haloTexture } from '../render.js';
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 const smooth = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); };
-const GOLDEN = 0.61803398875;
-const frac = (v) => v - Math.floor(v);
 
-export function createBell(letter) {
+export function createPortal(letter) {
   const cfg = CONFIG.spells;
   const { contours, points, width: w, height: h } = letter.shape;
   const cx = w / 2, cy = h / 2;
-  const durSec = cfg.durationMs.D / 1000;
+  const vp = { x: cfg.portalCenter.x * w, y: cfg.portalCenter.y * h };
+  const N = cfg.portalCopies;
+  const twist = (cfg.portalTwistDeg * Math.PI) / 180;
+  const spin = (cfg.portalRemnantSpinDeg * Math.PI) / 180;
 
-  // Contorno compartido, centrado: cada onda escala sobre el centro de la letra.
+  // Geometría compartida: el contorno y sus puntos, centrados en el centro de la caja
+  // para que cada copia escale y gire sobre su propio centro.
   const lineGeos = contours.map((c) => {
     const pts = c.points.map((p) => new THREE.Vector3(p.x - cx, p.y - cy, 0));
     if (c.closed) pts.push(pts[0].clone());
@@ -36,7 +39,8 @@ export function createBell(letter) {
   const group = new THREE.Group();
   letter.group.add(group);
 
-  const rings = Array.from({ length: cfg.bellRings }, () => {
+  // Una copia = grupo + material propio (cada una tiene su color y brillo).
+  function makeCopy() {
     const lineMat = new THREE.LineBasicMaterial({
       color: letter.cRose, transparent: true, opacity: 0, depthWrite: false,
       blending: THREE.AdditiveBlending,
@@ -48,109 +52,98 @@ export function createBell(letter) {
     const g = new THREE.Group();
     lineGeos.forEach((geo) => g.add(new THREE.Line(geo, lineMat)));
     g.add(new THREE.Points(pointGeo, pointMat));
-    g.position.set(cx, cy, 0);
     g.visible = false;
     group.add(g);
     return { g, lineMat, pointMat };
-  });
-
-  // Luciérnagas: nacen en el hueco de la D y se reparten en espiral alrededor.
-  const F = cfg.fireflyCount;
-  const start = new Float32Array(F);   // fracción de la duración en que salen
-  const angle0 = new Float32Array(F);
-  const radius = new Float32Array(F);  // alcance de reposo (fracción del semitamaño)
-  const phase = new Float32Array(F);
-  const tone = new Float32Array(F);    // 0..1: ámbar -> dorado
-  for (let i = 0; i < F; i++) {
-    start[i] = 0.05 + 0.4 * (i / F);
-    angle0[i] = frac(i * GOLDEN) * Math.PI * 2;
-    radius[i] = 0.55 + 0.7 * frac(i * 0.7548776662);
-    phase[i] = frac(i * 0.5698402909) * Math.PI * 2;
-    tone[i] = frac(i * 0.3247179572);
   }
-  const fpos = new Float32Array(F * 3);
-  const fcol = new Float32Array(F * 3);
-  const fgeo = new THREE.BufferGeometry();
-  fgeo.setAttribute('position', new THREE.BufferAttribute(fpos, 3));
-  fgeo.setAttribute('color', new THREE.BufferAttribute(fcol, 3));
-  const flies = new THREE.Points(
-    fgeo,
-    new THREE.PointsMaterial({
-      map: haloTexture(), vertexColors: true, transparent: true, depthWrite: false,
-      blending: THREE.AdditiveBlending, size: 17, sizeAttenuation: false,
-    }),
-  );
-  flies.frustumCulled = false;
-  group.add(flies);
+  const copies = Array.from({ length: N }, makeCopy);
+  const remnant = makeCopy();
+
+  // Coloca una copia a la "profundidad" f (0 = grande/cerca, N = pequeña/fondo).
+  function place(copy, f, opacity, color) {
+    const s = cfg.portalScaleStep ** (f + 1);
+    // El centro de la copia se desplaza hacia el punto de fuga a medida que se encoge.
+    copy.g.position.set(cx + (vp.x - cx) * (1 - s), cy + (vp.y - cy) * (1 - s), 0);
+    copy.g.scale.setScalar(s);
+    copy.g.visible = opacity > 0.001;
+    copy.lineMat.opacity = opacity;
+    copy.pointMat.opacity = opacity * 0.6;
+    copy.lineMat.color.copy(color);
+    copy.pointMat.color.copy(color);
+  }
 
   const tmp = new THREE.Color();
-
-  function updateFlies(k, sec) {
-    for (let i = 0; i < F; i++) {
-      const p = clamp01((k - start[i]) / 0.35);
-      const e = 1 - (1 - p) ** 3; // sale rápido y se asienta despacio
-      const a = angle0[i] + cfg.fireflyTurns * Math.PI * 2 * e;
-      const wob = 5 / letter.scale;
-      fpos[i * 3] = cx + Math.cos(a) * radius[i] * w * 0.75 * e + Math.sin(sec * 0.9 + phase[i]) * wob;
-      fpos[i * 3 + 1] = cy + Math.sin(a) * radius[i] * h * 0.6 * e + Math.cos(sec * 1.1 + phase[i]) * wob;
-      const twinkle = 0.55 + 0.45 * Math.sin(sec * cfg.fireflyTwinkleHz * Math.PI * 2 + phase[i]);
-      const b = smooth(0, 0.1, p) * twinkle * 1.3;
-      tmp.copy(letter.cAmber).lerp(letter.cAwake, tone[i]);
-      fcol[i * 3] = tmp.r * b; fcol[i * 3 + 1] = tmp.g * b; fcol[i * 3 + 2] = tmp.b * b;
-    }
-    fgeo.attributes.position.needsUpdate = true;
-    fgeo.attributes.color.needsUpdate = true;
-  }
-
-  function hideRings() {
-    rings.forEach((r) => { r.g.visible = false; r.lineMat.opacity = 0; r.pointMat.opacity = 0; });
-  }
+  const mix = (a, b, t) => tmp.copy(a).lerp(b, t);
 
   function reset() {
-    hideRings();
-    fcol.fill(0);
-    fgeo.attributes.color.needsUpdate = true;
+    copies.forEach((c) => { c.g.visible = false; c.lineMat.opacity = 0; c.pointMat.opacity = 0; });
+    remnant.g.visible = false;
+    remnant.lineMat.opacity = 0;
+    remnant.pointMat.opacity = 0;
   }
 
+  // k: progreso 0..1 del hechizo; ms: tiempo desde que empezó.
   function conjured(k, ms) {
-    const sec = ms / 1000;
-    rings.forEach((r, i) => {
-      const p = clamp01((k - i * cfg.bellStagger) / cfg.bellRingLife);
-      if (p <= 0 || p >= 1) { r.g.visible = false; r.lineMat.opacity = 0; r.pointMat.opacity = 0; return; }
-      const e = 1 - (1 - p) ** 2;
-      r.g.visible = true;
-      r.g.scale.setScalar(1 + (cfg.bellMaxScale - 1) * e);
-      const op = 0.85 * (1 - p) ** 1.2 * smooth(0, 0.1, p);
-      r.lineMat.opacity = op;
-      r.pointMat.opacity = op * 0.6;
-      tmp.copy(letter.cRose).lerp(letter.cAwake, i / Math.max(1, rings.length - 1));
-      r.lineMat.color.copy(tmp);
-      r.pointMat.color.copy(tmp);
-    });
-    updateFlies(k, sec);
+    const open = smooth(0, 0.25, k);
+    const close = smooth(0.75, 1, k);
+    const phase = (ms / 1000) * cfg.portalFlow;
+    const twistNow = twist * open; // el giro también se "abre" poco a poco
 
-    // Destello: uno por onda, pequeño; la letra misma pasa de rosa a dorado.
-    const pulse = Math.max(0, Math.cos(((k / cfg.bellStagger) % 1) * Math.PI * 2) * 0.5 + 0.5);
+    for (let i = 0; i < N; i++) {
+      const f = (i + phase) % N;           // profundidad continua: las copias caen y se reciclan
+      const depth = f / N;                 // 0..1
+      const visible = clamp01(open * N - f); // la apertura revela copias de cerca a lejos
+      // Aparece suavemente al nacer y se apaga al llegar al fondo.
+      const edge = Math.sin(Math.PI * clamp01(depth)) ** 0.7;
+      const opacity = 0.7 * edge * visible * (1 - close);
+      // Color: rosa al frente, ámbar al fondo, dorado en el último anillo.
+      const base = mix(letter.cRose, letter.cAmber, depth).clone();
+      const gold = smooth(0.6, 1, depth) * smooth(0.3, 0.8, k);
+      place(copies[i], f, opacity, base.lerp(letter.cAwake, gold));
+      copies[i].g.rotation.z = twistNow * (f + 1);
+    }
+
+    // Copia que queda: aparece al cierre en el punto de fuga y gira despacio.
+    const rs = cfg.portalRemnantScale;
+    remnant.g.position.set(vp.x, vp.y, 0);
+    remnant.g.scale.setScalar(rs);
+    remnant.g.rotation.z = (ms / 1000) * spin;
+    remnant.g.visible = close > 0.001;
+    remnant.lineMat.opacity = 0.9 * close;
+    remnant.pointMat.opacity = 0.6 * close;
+    remnant.lineMat.color.copy(letter.cAwake);
+    remnant.pointMat.color.copy(letter.cAwake);
+
+    // Estallido de luz al fondo cuando el túnel está pleno.
+    const bump = Math.exp(-(((k - 0.7) / 0.1) ** 2));
     return {
-      lineOp: smooth(0, 0.1, k),
-      pointOp: 0.8 * smooth(0, 0.1, k),
-      color: new THREE.Color().copy(letter.cRose).lerp(letter.cAwake, smooth(0.15, 0.7, k)),
-      flashOp: 0.18 * pulse * (1 - smooth(0.6, 0.9, k)),
-      flashScale: 0.6 + 0.3 * pulse,
+      lineOp: smooth(0, 0.2, k),
+      pointOp: 0.8 * smooth(0, 0.2, k),
+      color: mix(letter.cRose, letter.cAwake, smooth(0.5, 1, k)).clone(),
+      flashOp: 0.45 * bump,
+      flashScale: 0.6 + 0.8 * bump,
     };
   }
 
-  // Letra despierta: las ondas ya pasaron; las luciérnagas siguen revoloteando.
-  function awake(ms) {
-    hideRings();
-    updateFlies(1, ms / 1000 + durSec);
+  // Letra despierta: el portal ya se cerró; solo gira la copia pequeña.
+  function awake(ms, breath) {
+    copies.forEach((c) => { c.g.visible = false; c.lineMat.opacity = 0; c.pointMat.opacity = 0; });
+    remnant.g.visible = true;
+    remnant.g.rotation.z = ((ms + cfg.durationMs.D) / 1000) * spin;
+    const op = 0.55 + 0.35 * breath;
+    remnant.lineMat.opacity = op;
+    remnant.pointMat.opacity = op * 0.6;
   }
 
-  // Alcance (px de pantalla) del frente de la onda: lo usan los encadenamientos.
+  // El destello del letter.js se coloca en el punto de fuga de este hechizo.
+  const anchor = { x: vp.x, y: vp.y };
+
+  // Alcance (px de pantalla) de la luz que se derrama del portal: la usan los
+  // encadenamientos para avivar a las letras vecinas ("la alegría se contagia").
   function reach() {
-    const e = 1 - (1 - clamp01(letter.progress / 0.7)) ** 2;
-    return (1 + (cfg.bellMaxScale - 1) * e) * 0.5 * Math.hypot(w, h) * letter.scale;
+    const e = smooth(0.1, 0.7, letter.progress);
+    return (0.3 + 1.3 * e) * 0.5 * Math.hypot(w, h) * letter.scale;
   }
 
-  return { conjured, awake, reset, reach, anchor: { x: cx, y: cy } };
+  return { conjured, awake, reset, reach, anchor };
 }

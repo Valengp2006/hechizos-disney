@@ -15,12 +15,12 @@ Pantalla casi negra y un punto de luz que sigue al cursor. Las letras no se ven:
 
 | Letra | Gesto | Hechizo |
 |---|---|---|
-| D | círculo | campanada de luz |
-| I | subir | rebote ligero |
-| S | barrido horizontal | cinta de fiesta |
-| N | zigzag | cascada de chispas |
-| E | quedarse quieto | amanecer |
-| Y | agarrar (mantener) y soltar | floración |
+| D | círculo | **portal**: el contorno se repite hacia el fondo como un túnel de luz |
+| I | subir | **gravedad invertida**: el asta se estira y suelta polvo que cae un instante y luego sube |
+| S | barrido horizontal | **cinta**: se desenrolla y nada por la pantalla siguiendo el barrido |
+| N | zigzag | **relámpago**: descargas quebradas saltan entre las astas y por la diagonal |
+| E | quedarse quieto | **faro**: los brazos se alargan en haces que barren la oscuridad |
+| Y | agarrar (mantener) y soltar | **constelación-árbol**: la bifurcación se repite y florece |
 
 **Inicio de cuento:** al arrancar (y para cada visitante nuevo) una frase se traza con un lápiz de luz antes de poder jugar.
 

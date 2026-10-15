@@ -1,13 +1,14 @@
-// spells/e.js — Hechizo de la E: AMANECER (gesto: quedarse quieto).
+// spells/e.js — Hechizo de la E: FARO (gesto: quedarse quieto).
 //
-// Los tres brazos de la E se alargan despacio como rayos de luz cálida que se abren en
-// abanico. El polvo de toda la pantalla se vuelve dorado y sube suave. Premia la calma:
-// es el único gesto de no hacer nada. Termina con los rayos respirando.
-// Todo sale de la E: cada abanico nace en la punta de uno de sus brazos.
+// Los tres brazos de la E se alargan como haces de luz cálida y barren la oscuridad como
+// el faro de un puerto, cada uno con su ritmo. El polvo que tocan se vuelve dorado y sube
+// suave. Premia la calma: es el único gesto de no hacer nada.
+// Todo sale de la E: cada haz nace en la punta de uno de sus brazos.
 //
 // Línea de tiempo (k = 0..1 sobre spells.durationMs.E):
-//   0.1–0.6 los rayos crecen · 0.6–0.7 plenos · 0.7–1 se recogen al 45 % y quedan respirando.
-// Determinista: ángulo y largo de cada rayo salen de su índice.
+//   0.1–0.5 los haces crecen mientras barren · 0.5–0.7 plenos · 0.7–1 se recogen al 50 %
+//   y quedan barriendo despacio (letra despierta).
+// Determinista: el ángulo de cada haz es una onda seno con fase fija.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { haloTexture } from '../render.js';
@@ -15,32 +16,22 @@ import { haloTexture } from '../render.js';
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 const smooth = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); };
 const frac = (v) => v - Math.floor(v);
-const MOTES = 8; // motas de luz que viajan por cada rayo
+const MOTES = 8;       // motas de luz que viajan por cada línea del haz
+const TO_RAD = Math.PI / 180;
 
-export function createDawn(letter) {
+export function createLighthouse(letter) {
   const cfg = CONFIG.spells;
   const { width: w, height: h } = letter.shape;
   const R = cfg.dawnRays;
 
-  // Tres brazos: arriba, centro (más corto) y abajo. Cada uno abre un abanico a la derecha.
-  const arms = [
-    { x: 0.95 * w, y: 0.07 * h, tilt: -12 },
-    { x: 0.78 * w, y: 0.50 * h, tilt: 0 },
-    { x: 0.95 * w, y: 0.93 * h, tilt: 12 },
+  // Tres haces, uno por brazo: arriba, centro (más corto) y abajo, con fases distintas.
+  const beams = [
+    { x: 0.95 * w, y: 0.07 * h, base: -28, phase: 0.0 },
+    { x: 0.78 * w, y: 0.50 * h, base: 0, phase: 2.1 },
+    { x: 0.95 * w, y: 0.93 * h, base: 28, phase: 4.2 },
   ];
-  const rays = [];
-  arms.forEach((a, ai) => {
-    for (let r = 0; r < R; r++) {
-      const spread = R > 1 ? (r / (R - 1)) * 2 - 1 : 0;
-      const deg = a.tilt + spread * cfg.dawnFanDeg;
-      rays.push({
-        ox: a.x, oy: a.y, ang: (deg * Math.PI) / 180,
-        len: 0.75 + 0.25 * Math.cos(spread * 1.3) - 0.05 * ((ai * R + r) % 3),
-        phase: frac((ai * R + r) * 0.6180339887),
-      });
-    }
-  });
-  const NR = rays.length;
+  const NB = beams.length;
+  const NR = NB * R;
 
   const seg = new Float32Array(NR * 2 * 3), segCol = new Float32Array(NR * 2 * 3);
   const segGeo = new THREE.BufferGeometry();
@@ -65,26 +56,36 @@ export function createDawn(letter) {
 
   const tmp = new THREE.Color();
 
-  // growth: 0..1 del largo; glow: brillo 0..1; sec: tiempo para el viaje de las motas.
+  // growth: 0..1 del largo; glow: brillo 0..1; sec: tiempo (barrido y viaje de las motas).
   function draw(growth, glow, sec) {
     const L = (cfg.dawnRayLength * window.innerWidth) / letter.scale; // px -> unidades locales
-    for (let i = 0; i < NR; i++) {
-      const r = rays[i];
-      const len = L * r.len * growth;
-      const ex = r.ox + Math.cos(r.ang) * len, ey = r.oy + Math.sin(r.ang) * len;
-      seg[i * 6] = r.ox; seg[i * 6 + 1] = r.oy; seg[i * 6 + 2] = 0;
-      seg[i * 6 + 3] = ex; seg[i * 6 + 4] = ey; seg[i * 6 + 5] = 0;
-      tmp.copy(letter.cAmber).lerp(letter.cAwake, 0.5);
-      // El rayo nace brillante en el brazo y se apaga en la punta.
-      segCol[i * 6] = tmp.r * glow; segCol[i * 6 + 1] = tmp.g * glow; segCol[i * 6 + 2] = tmp.b * glow;
-      segCol[i * 6 + 3] = segCol[i * 6 + 4] = segCol[i * 6 + 5] = 0;
-      for (let m = 0; m < MOTES; m++) {
-        const idx = i * MOTES + m;
-        const s = frac(sec * 0.18 + r.phase + m / MOTES); // avanzan por el rayo y reinician
-        mPos[idx * 3] = r.ox + Math.cos(r.ang) * len * s;
-        mPos[idx * 3 + 1] = r.oy + Math.sin(r.ang) * len * s;
-        const b = glow * Math.sin(Math.PI * s) * 0.9;
-        mCol[idx * 3] = tmp.r * b; mCol[idx * 3 + 1] = tmp.g * b; mCol[idx * 3 + 2] = tmp.b * b;
+    const sweepW = (2 * Math.PI) / (cfg.dawnSweepMs / 1000);
+    for (let b = 0; b < NB; b++) {
+      const bm = beams[b];
+      // Ángulo del haz: oscila alrededor de su dirección base.
+      const center = (bm.base + cfg.dawnSweepDeg * Math.sin(sec * sweepW + bm.phase)) * TO_RAD;
+      const len = L * (b === 1 ? 0.8 : 1) * growth;
+      for (let r = 0; r < R; r++) {
+        const i = b * R + r;
+        const spread = R > 1 ? (r / (R - 1)) * 2 - 1 : 0;
+        const ang = center + spread * cfg.dawnFanDeg * TO_RAD;
+        const ex = bm.x + Math.cos(ang) * len, ey = bm.y + Math.sin(ang) * len;
+        seg[i * 6] = bm.x; seg[i * 6 + 1] = bm.y; seg[i * 6 + 2] = 0;
+        seg[i * 6 + 3] = ex; seg[i * 6 + 4] = ey; seg[i * 6 + 5] = 0;
+        tmp.copy(letter.cAmber).lerp(letter.cAwake, 0.5);
+        // El haz nace brillante en el brazo y se apaga en la punta; el borde del haz es más tenue.
+        const edge = 1 - 0.45 * Math.abs(spread);
+        segCol[i * 6] = tmp.r * glow * edge; segCol[i * 6 + 1] = tmp.g * glow * edge; segCol[i * 6 + 2] = tmp.b * glow * edge;
+        segCol[i * 6 + 3] = segCol[i * 6 + 4] = segCol[i * 6 + 5] = 0;
+        const phase = frac(i * 0.6180339887);
+        for (let m = 0; m < MOTES; m++) {
+          const idx = i * MOTES + m;
+          const s = frac(sec * 0.22 + phase + m / MOTES); // avanzan por el haz y reinician
+          mPos[idx * 3] = bm.x + Math.cos(ang) * len * s;
+          mPos[idx * 3 + 1] = bm.y + Math.sin(ang) * len * s;
+          const bb = glow * Math.sin(Math.PI * s) * 0.8 * edge;
+          mCol[idx * 3] = tmp.r * bb; mCol[idx * 3 + 1] = tmp.g * bb; mCol[idx * 3 + 2] = tmp.b * bb;
+        }
       }
     }
     segGeo.attributes.position.needsUpdate = true;
@@ -100,8 +101,8 @@ export function createDawn(letter) {
   }
 
   function conjured(k, ms) {
-    const grow = smooth(0.1, 0.6, k);
-    const settle = 1 - 0.55 * smooth(0.7, 1, k);
+    const grow = smooth(0.1, 0.5, k);
+    const settle = 1 - 0.5 * smooth(0.7, 1, k);
     draw(grow * settle, smooth(0.05, 0.3, k), ms / 1000);
     return {
       lineOp: smooth(0, 0.15, k),
@@ -109,14 +110,14 @@ export function createDawn(letter) {
       color: tmp.clone().copy(letter.cRose).lerp(letter.cAwake, smooth(0.3, 0.8, k)),
       flashOp: 0.16 * smooth(0.1, 0.5, k) * (1 - smooth(0.7, 1, k)),
       flashScale: 1.0,
-      lift: smooth(0.15, 0.4, k),                       // el polvo sube suave...
-      warmth: cfg.dawnWarmth * smooth(0.15, 0.5, k) * (1 - smooth(0.85, 1, k)), // ...y se dora
+      lift: smooth(0.15, 0.4, k),                                                // el polvo sube suave...
+      warmth: cfg.dawnWarmth * smooth(0.15, 0.5, k) * (1 - smooth(0.85, 1, k)),  // ...y se dora
     };
   }
 
-  // Despierta: los rayos quedan al 45 % y respiran.
+  // Despierta: los haces quedan al 50 % y siguen barriendo despacio, respirando.
   function awake(ms, breath) {
-    draw(0.45, 0.45 + 0.4 * breath, ms / 1000 + cfg.durationMs.E / 1000);
+    draw(0.5, 0.45 + 0.4 * breath, ms / 1000 + cfg.durationMs.E / 1000);
   }
 
   return { conjured, awake, reset };

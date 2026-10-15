@@ -14,15 +14,15 @@ import { CONFIG } from './config.js';
 import { letterShape } from './font.js';
 import { haloTexture, rgb } from './render.js';
 import { rng } from './dust.js';
-import { createBell } from './spells/d.js';
-import { createBounce } from './spells/i.js';
+import { createPortal } from './spells/d.js';
+import { createGravity } from './spells/i.js';
 import { createRibbon } from './spells/s.js';
-import { createSparks } from './spells/n.js';
-import { createDawn } from './spells/e.js';
+import { createLightning } from './spells/n.js';
+import { createLighthouse } from './spells/e.js';
 import { createBloom } from './spells/y.js';
 
 // Hechizos por letra. Las letras sin entrada usan el destello placeholder.
-const SPELLS = { D: createBell, I: createBounce, S: createRibbon, N: createSparks, E: createDawn, Y: createBloom };
+const SPELLS = { D: createPortal, I: createGravity, S: createRibbon, N: createLightning, E: createLighthouse, Y: createBloom };
 
 export const STATE = {
   LATENT: 'latent', SENSITIVE: 'sensitive', LISTENING: 'listening',

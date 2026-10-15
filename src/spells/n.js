@@ -1,62 +1,77 @@
-// spells/n.js — Hechizo de la N: CASCADA DE CHISPAS (gesto: zigzag).
+// spells/n.js — Hechizo de la N: RELÁMPAGO (gesto: zigzag).
 //
-// Una chispa nace en la base de la N y rebota de asta a asta, como una pelota feliz,
-// subiendo por la letra. Cada rebote ilumina el asta donde cae (como una tecla) y suelta
-// unas estrellitas. La diagonal se enciende mientras la chispa la cruza en el aire.
-// Todo sale de la N: los puntos de su propio trazo, agrupados por asta.
+// Descargas quebradas saltan entre las dos astas de la N, iluminándolas como teclas; la
+// última descarga sigue la propia diagonal, que se vuelve el relámpago. Al terminar, una
+// chispa sale a la letra más cercana y la enciende un instante (contagio).
+// Todo sale de la N: puntos de su trazo, agrupados por asta, y su diagonal con ruido.
 //
 // Línea de tiempo (k = 0..1 sobre spells.durationMs.N):
-//   salta a partir de k=0.08; cada salto dura sparkFlight; al final todo queda dorado.
-// Determinista: las alturas de los rebotes y las estrellitas salen de su índice.
+//   descarga i en k = 0.10 + i * boltStagger, dura boltLife; la última es la diagonal.
+//   Luego la chispa viaja a la letra vecina y la letra queda dorada.
+// Determinista: alturas y quiebres salen de funciones fijas del índice (el "ruido" no
+// decide qué pasa, solo decora; cambia cada ~35 ms para parpadear).
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { haloTexture } from '../render.js';
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 const smooth = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); };
-const START = 0.08;
+const frac = (v) => v - Math.floor(v);
+const START = 0.1;
+const SEND = 0.17;   // fracción de la duración que tarda la chispa en llegar a la vecina
 const ECHOES = 6;
-const SEND = 0.17; // fracción de la duración que tarda la chispa en llegar a la letra vecina
 
-export function createSparks(letter) {
+// "Ruido" determinista en [-1, 1] a partir de números (no es azar: misma entrada, misma salida).
+const noise = (a, b, c) => frac(Math.sin(a * 12.9898 + b * 78.233 + c * 37.719) * 43758.5453) * 2 - 1;
+
+export function createLightning(letter) {
   const cfg = CONFIG.spells;
   const { points, width: w, height: h } = letter.shape;
   const P = points.length;
+  const B = cfg.boltCount;
+  const S = cfg.boltSegments;
 
-  // Cada punto del trazo pertenece al asta izquierda, a la derecha o a la diagonal.
+  // Asta izquierda, derecha o diagonal para cada punto del trazo.
   const side = new Uint8Array(P);
   points.forEach((p, j) => { side[j] = p.x < 0.3 * w ? 0 : p.x > 0.7 * w ? 1 : 2; });
 
-  // Waypoints: alternan izquierda/derecha y suben por la letra (y local, crece hacia abajo).
-  const M = cfg.sparkBounces + 1;
-  const wp = Array.from({ length: M }, (_, m) => ({
-    x: (m % 2 === 0 ? 0.14 : 0.86) * w,
-    y: (0.9 - (0.8 * m) / Math.max(1, M - 1)) * h,
-    side: m % 2 === 0 ? 0 : 1,
-    t: START + m * cfg.sparkFlight, // instante (k) en que llega
-  }));
+  // Cada descarga: de un asta a otra, a alturas fijas; la última recorre la diagonal.
+  const bolts = Array.from({ length: B }, (_, i) => {
+    const last = i === B - 1;
+    const ya = (0.2 + 0.6 * frac(i * 0.61803)) * h;
+    const yb = (0.2 + 0.6 * frac(i * 0.61803 + 0.4)) * h;
+    return {
+      t: START + i * cfg.boltStagger,
+      x0: 0.14 * w, y0: last ? 0.06 * h : ya,
+      x1: 0.86 * w, y1: last ? 0.94 * h : yb,
+      diag: last,
+    };
+  });
 
-  const mk = (n, size) => {
+  const mk = (n, size, lines) => {
     const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    const obj = new THREE.Points(geo, new THREE.PointsMaterial({
-      map: haloTexture(), vertexColors: true, transparent: true, depthWrite: false,
-      blending: THREE.AdditiveBlending, size, sizeAttenuation: false,
-    }));
+    const obj = lines
+      ? new THREE.LineSegments(geo, new THREE.LineBasicMaterial({
+        vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      }))
+      : new THREE.Points(geo, new THREE.PointsMaterial({
+        map: haloTexture(), vertexColors: true, transparent: true, depthWrite: false,
+        blending: THREE.AdditiveBlending, size, sizeAttenuation: false,
+      }));
     obj.frustumCulled = false;
     letter.group.add(obj);
     return { pos, col, geo };
   };
 
-  // Capa de luz sobre los puntos del trazo (las "teclas").
-  const keys = mk(P, 9);
+  const keys = mk(P, 9, false);                 // las astas como teclas
   points.forEach((p, j) => { keys.pos[j * 3] = p.x; keys.pos[j * 3 + 1] = p.y; });
   keys.geo.attributes.position.needsUpdate = true;
-  const ball = mk(1 + ECHOES, 16);
-  const S = cfg.sparkStars;
-  const stars = mk(cfg.sparkBounces * S, 8);
+  const boltLines = mk(B * S * 2, 0, true);     // tramos de las descargas
+  const boltDots = mk(B * (S + 1), 15, false);  // brillo en cada quiebre
+  const ball = mk(1 + ECHOES, 16, false);       // la chispa que viaja a la vecina
 
   // Al final la chispa vuela a la letra más cercana (por distancia entre centros).
   let target = null, pending = null, sent = false;
@@ -75,93 +90,87 @@ export function createSparks(letter) {
   const takeArrival = () => { const t = pending; pending = null; return t; };
 
   const tmp = new THREE.Color();
+  const white = new THREE.Color(1, 0.96, 0.82); // el núcleo de la descarga es casi blanco cálido
   const set = (arr, i, c, b) => { arr[i * 3] = c.r * b; arr[i * 3 + 1] = c.g * b; arr[i * 3 + 2] = c.b * b; };
-
-  // Posición local de la chispa en el instante k (null si no está en el aire/asta).
-  function ballAt(k) {
-    if (k < wp[0].t) return null;
-    if (k >= wp[M - 1].t) {
-      // Envío: de la última posición al centro de la letra vecina, con un arco.
-      const u = clamp01((k - wp[M - 1].t) / SEND);
-      if (!target || k >= wp[M - 1].t + SEND) return null;
-      const sc = letter.scale;
-      const tx = (target.pos.x + (target.shape.width * target.scale) / 2 - letter.pos.x) / sc;
-      const ty = (target.pos.y + (target.shape.height * target.scale) / 2 - letter.pos.y) / sc;
-      return {
-        x: wp[M - 1].x + (tx - wp[M - 1].x) * u,
-        y: wp[M - 1].y + (ty - wp[M - 1].y) * u - 0.3 * h * Math.sin(Math.PI * u),
-        u, flying: false,
-      };
-    }
-    const i = Math.min(M - 2, Math.floor((k - START) / cfg.sparkFlight));
-    const u = clamp01((k - wp[i].t) / cfg.sparkFlight);
-    return {
-      x: wp[i].x + (wp[i + 1].x - wp[i].x) * u,
-      y: wp[i].y + (wp[i + 1].y - wp[i].y) * u - cfg.sparkArc * h * Math.sin(Math.PI * u),
-      u, flying: true,
-    };
-  }
 
   function reset() {
     pending = null; sent = false;
-    keys.col.fill(0); ball.col.fill(0); stars.col.fill(0);
-    [keys, ball, stars].forEach((o) => { o.geo.attributes.color.needsUpdate = true; });
+    [keys, boltLines, boltDots, ball].forEach((o) => { o.col.fill(0); o.geo.attributes.color.needsUpdate = true; });
   }
 
-  function conjured(k) {
-    // Teclas: cada rebote ilumina su asta y se apaga; la diagonal brilla en el aire.
-    const b0 = ballAt(k);
-    const diag = b0 && b0.flying ? 0.7 * Math.sin(Math.PI * b0.u) : 0;
-    const final = smooth(0.82, 1, k);
+  function conjured(k, ms) {
+    const flick = Math.floor(ms / 35);          // el relámpago parpadea: nuevo quiebre cada 35 ms
     const stemPulse = [0, 0];
-    wp.forEach((m) => {
-      if (k >= m.t) stemPulse[m.side] = Math.max(stemPulse[m.side], Math.exp(-(k - m.t) / cfg.sparkPulse));
+    let diagGlow = 0;
+    const endK = bolts[B - 1].t + cfg.boltLife;
+
+    bolts.forEach((b, i) => {
+      const u = (k - b.t) / cfg.boltLife;       // 0..1 durante la descarga
+      const live = u >= 0 && u <= 1;
+      if (k >= b.t) {
+        const decay = Math.exp(-(k - b.t) / cfg.sparkPulse);
+        if (b.diag) { diagGlow = Math.max(diagGlow, decay); stemPulse[0] = Math.max(stemPulse[0], decay * 0.6); stemPulse[1] = Math.max(stemPulse[1], decay * 0.6); }
+        else { stemPulse[0] = Math.max(stemPulse[0], decay); stemPulse[1] = Math.max(stemPulse[1], decay); }
+      }
+      const dx = b.x1 - b.x0, dy = b.y1 - b.y0, len = Math.hypot(dx, dy);
+      const nx = -dy / len, ny = dx / len;      // perpendicular
+      const bright = live ? (1 - u * u) * (0.75 + 0.25 * noise(i, flick, 1)) : 0;
+      for (let s = 0; s <= S; s++) {
+        const t = s / S;
+        // El quiebre es máximo a mitad del trazo y nulo en los extremos (nace y muere en el asta).
+        const off = noise(s, i, flick) * cfg.boltJag * h * Math.sin(Math.PI * t) * (b.diag ? 1.2 : 1);
+        const x = b.x0 + dx * t + nx * off, y = b.y0 + dy * t + ny * off;
+        const di = i * (S + 1) + s;
+        boltDots.pos[di * 3] = x; boltDots.pos[di * 3 + 1] = y;
+        tmp.copy(white).lerp(letter.cAmber, 0.3);
+        set(boltDots.col, di, tmp, bright * 1.0);
+        if (s > 0) {
+          const li = (i * S + (s - 1)) * 2;
+          const px = boltDots.pos[(di - 1) * 3], py = boltDots.pos[(di - 1) * 3 + 1];
+          boltLines.pos[li * 3] = px; boltLines.pos[li * 3 + 1] = py;
+          boltLines.pos[li * 3 + 3] = x; boltLines.pos[li * 3 + 4] = y;
+          tmp.copy(white).lerp(letter.cAwake, 0.25);
+          set(boltLines.col, li, tmp, bright); set(boltLines.col, li + 1, tmp, bright);
+        }
+      }
     });
+
+    // Teclas: las astas se encienden al recibir la descarga; la diagonal, en la última.
+    const final = smooth(0.82, 1, k);
     for (let j = 0; j < P; j++) {
-      const v = side[j] === 2 ? diag : stemPulse[side[j]];
+      const v = side[j] === 2 ? diagGlow : stemPulse[side[j]];
       tmp.copy(letter.cAmber).lerp(letter.cAwake, final);
       set(keys.col, j, tmp, Math.min(1, v + final * 0.6));
     }
 
-    // Chispa y su estela (ecos en el tiempo).
+    // Chispa que viaja a la letra vecina.
+    const sendT0 = endK, sendT1 = endK + SEND;
     for (let e = 0; e <= ECHOES; e++) {
-      const b = ballAt(k - e * 0.008);
-      const alive = !!b;
-      if (!alive) { set(ball.col, e, letter.cAwake, 0); continue; }
-      ball.pos[e * 3] = b.x; ball.pos[e * 3 + 1] = b.y;
-      tmp.copy(e === 0 ? letter.cRose : letter.cAmber).lerp(letter.cAwake, 0.4);
+      const kk = k - e * 0.008;
+      if (!target || kk < sendT0 || kk > sendT1) { set(ball.col, e, letter.cAwake, 0); continue; }
+      const u = clamp01((kk - sendT0) / SEND);
+      const sc = letter.scale;
+      const tx = (target.pos.x + (target.shape.width * target.scale) / 2 - letter.pos.x) / sc;
+      const ty = (target.pos.y + (target.shape.height * target.scale) / 2 - letter.pos.y) / sc;
+      ball.pos[e * 3] = bolts[B - 1].x1 + (tx - bolts[B - 1].x1) * u;
+      ball.pos[e * 3 + 1] = bolts[B - 1].y1 + (ty - bolts[B - 1].y1) * u - 0.3 * h * Math.sin(Math.PI * u);
+      tmp.copy(e === 0 ? white : letter.cAmber).lerp(letter.cAwake, 0.4);
       set(ball.col, e, tmp, e === 0 ? 1 : 0.6 * (1 - e / (ECHOES + 1)) ** 2);
     }
+    if (!sent && target && k >= sendT1) { sent = true; pending = target; }
 
-    // Estrellitas: en cada rebote salen en abanico y se apagan.
-    for (let m = 1; m < M; m++) {
-      for (let s = 0; s < S; s++) {
-        const idx = (m - 1) * S + s;
-        const t = (k - wp[m].t) / 0.1; // 0..1
-        if (t < 0 || t > 1) { set(stars.col, idx, letter.cAwake, 0); continue; }
-        const a = -Math.PI / 2 + ((s + 0.5) / S - 0.5) * Math.PI * 1.6 + (wp[m].side ? 0.4 : -0.4);
-        const r = 0.12 * h * (1 - (1 - t) ** 2);
-        stars.pos[idx * 3] = wp[m].x + Math.cos(a) * r;
-        stars.pos[idx * 3 + 1] = wp[m].y + Math.sin(a) * r;
-        tmp.copy(letter.cAmber).lerp(letter.cAwake, s / S);
-        set(stars.col, idx, tmp, 0.95 * (1 - t));
-      }
-    }
-    keys.geo.attributes.color.needsUpdate = true;
+    [keys, boltLines, boltDots, ball].forEach((o) => { o.geo.attributes.color.needsUpdate = true; });
+    boltLines.geo.attributes.position.needsUpdate = true;
+    boltDots.geo.attributes.position.needsUpdate = true;
     ball.geo.attributes.position.needsUpdate = true;
-    ball.geo.attributes.color.needsUpdate = true;
-    stars.geo.attributes.position.needsUpdate = true;
-    stars.geo.attributes.color.needsUpdate = true;
 
-    // La chispa llegó: el contagio se avisa una sola vez.
-    if (!sent && target && k >= wp[M - 1].t + SEND) { sent = true; pending = target; }
-    const pulse = Math.max(stemPulse[0], stemPulse[1]);
+    const pulse = Math.max(stemPulse[0], stemPulse[1], diagGlow);
     return {
       lineOp: 0.35 + 0.65 * smooth(0, 0.4, k),
       pointOp: 0.5 * smooth(0, 0.4, k),
       color: tmp.clone().copy(letter.cRose).lerp(letter.cAwake, smooth(0.5, 1, k)),
-      flashOp: 0.14 * pulse,
-      flashScale: 0.7,
+      flashOp: 0.2 * pulse,
+      flashScale: 0.8,
     };
   }
 

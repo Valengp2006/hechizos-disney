@@ -198,28 +198,29 @@ export const CONFIG = {
   // ---------- Hechizos ----------
   spells: {
     durationMs: { D: 4000, I: 4000, S: 5000, N: 3000, E: 5000, Y: 6000 },
-    // --- D: campanada de luz ---
-    bellRings: 5,             // D: ondas de contorno que se expanden (más = más celebración)
-    bellMaxScale: 1.8,        // D: tamaño final de la onda respecto a la letra
-    bellStagger: 0.14,        // D: separación entre ondas (fracción de la duración)
-    bellRingLife: 0.4,        // D: cuánto vive cada onda (fracción de la duración)
-    fireflyCount: 30,         // D: luciérnagas que salen de la panza
-    fireflyTurns: 1.2,        // D: vueltas de la espiral con que se reparten
-    fireflyTwinkleHz: 1.1,    // D: parpadeo de las luciérnagas (veces por segundo)
-    // --- I: rebote ligero ---
-    riseSquash: 0.88,         // I: cuánto se encoge al tomar impulso (1 = nada)
-    riseStretch: 1.5,         // I: estirón máximo del salto (1.5 = 50 % más alta)
-    riseBalloons: 28,         // I: globos de luz que suben
-    riseSpeed: 110,           // I: velocidad de ascenso de los globos (px/s)
-    riseSwayPx: 16,           // I: balanceo lateral de los globos (px)
-    riseSpread: 0.4,          // I: fracción de la duración en que se sueltan
-    riseHeight: 360,          // I: altura (px) a la que los globos estallan en chispas
-    riseGlobalLift: 35,       // I: ascenso suave (px/s) del polvo de toda la pantalla
-    // --- N: cascada de chispas ---
-    sparkBounces: 5,          // N: rebotes de la chispa entre las dos astas
-    sparkFlight: 0.14,        // N: duración de cada salto (fracción de la duración total)
-    sparkArc: 0.2,            // N: altura del arco de cada salto (fracción del alto de la letra)
-    sparkStars: 8,            // N: estrellitas que salen en cada rebote
+    // --- D: portal ---
+    portalCopies: 12,         // D: copias del contorno hacia el fondo
+    portalScaleStep: 0.78,    // D: escala de cada copia respecto a la anterior (más alto = túnel más largo)
+    portalTwistDeg: 14,       // D: giro (grados) entre copias consecutivas
+    portalFlow: 3,            // D: copias por segundo que "caen" por el túnel
+    portalCenter: { x: 0.55, y: 0.5 }, // D: punto de fuga dentro de la letra (fracción de su caja)
+    portalRemnantScale: 0.22, // D: tamaño de la copia que queda girando en la panza
+    portalRemnantSpinDeg: 40, // D: velocidad de giro de esa copia (grados/s)
+    // --- I: gravedad invertida ---
+    riseSpeed: 90,            // I: velocidad de ascenso del polvo (px/s)
+    riseStretch: 1.6,         // I: cuánto se estira el asta (1.6 = 60 % más alta)
+    riseDustPerPoint: 4,      // I: partículas por punto muestreado del contorno (densidad)
+    riseFallSpeed: 40,        // I: velocidad (px/s) de la caída "normal" antes de invertirse
+    riseReverseMs: 500,       // I: cuánto tarda la gravedad en invertirse (ms). Más = giro más lento
+    riseSpread: 0.35,         // I: fracción de la duración en que se sueltan (de abajo hacia arriba)
+    riseHeight: 420,          // I: altura (px) a la que el polvo termina de apagarse
+    riseGlobalLift: 60,       // I: ascenso (px/s) que el hechizo da al polvo de toda la pantalla
+    // --- N: relámpago ---
+    boltCount: 4,             // N: descargas que saltan entre las astas (la última sigue la diagonal)
+    boltSegments: 14,         // N: tramos de cada descarga (más = más quebrada)
+    boltJag: 0.1,             // N: cuánto se quiebra (fracción del alto de la letra)
+    boltLife: 0.12,           // N: cuánto dura cada descarga (fracción de la duración total)
+    boltStagger: 0.15,        // N: separación entre descargas (fracción de la duración total)
     sparkPulse: 0.06,         // N: cuánto tarda en apagarse el asta que se ilumina (fracción)
     // --- S: cinta de fiesta ---
     ribbonDistance: 0.42,     // S: alcance horizontal de la cinta (fracción del ancho de pantalla)
@@ -227,12 +228,14 @@ export const CONFIG = {
     ribbonLoop: 0.07,         // S: radio del rizo final (fracción del alto de pantalla)
     ribbonSpread: 0.28,       // S: cuánto se estira la cinta (fracción de la duración)
     ribbonConfetti: 2,        // S: ecos de luz que deja cada punto (0 = sin confeti)
-    // --- E: amanecer ---
-    dawnRayLength: 0.32,      // E: alcance de los rayos (fracción del ancho de pantalla)
-    dawnRays: 5,              // E: rayos por brazo (en abanico)
-    dawnFanDeg: 38,           // E: apertura del abanico de cada brazo (grados a cada lado)
+    // --- E: faro ---
+    dawnRayLength: 0.38,      // E: alcance de los haces (fracción del ancho de pantalla)
+    dawnRays: 5,              // E: líneas por haz (le dan ancho)
+    dawnFanDeg: 9,            // E: ancho del haz (grados)
+    dawnSweepDeg: 34,         // E: cuánto barre cada haz a cada lado (grados)
+    dawnSweepMs: 4200,        // E: lo que tarda un barrido completo (ms)
     dawnLift: 45,             // E: ascenso suave (px/s) del polvo que toca la luz
-    dawnWarmth: 0.85,         // E: cuánto se vuelve dorado el polvo de la pantalla (0..1)
+    dawnWarmth: 0.85,         // E: cuánto se dora el polvo de la pantalla (0..1)
     // --- Y: floración ---
     chargeMs: 1500,           // Y: tiempo de agarre para la floración máxima
     bloomDepthMin: 2,         // Y: niveles de ramas con un agarre mínimo
