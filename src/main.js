@@ -171,7 +171,7 @@ renderer.setAnimationLoop(() => {
   const frameStart = performance.now();
   const dt = Math.min(clock.getDelta(), 0.1); // tope: una pestaña dormida no hace saltar nada
   updateInput(dt);
-  backdrop.update(clock.elapsedTime);
+  backdrop.update(clock.elapsedTime, input);
   // Antes de comenzar las letras no reaccionan: se les da una entrada inactiva.
   const gameInput = started ? input : idleInput;
   finale?.update(dt * 1000, performance.now(), gameInput);

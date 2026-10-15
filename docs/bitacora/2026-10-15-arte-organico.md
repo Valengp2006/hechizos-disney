@@ -38,3 +38,16 @@ Un "estilo cuento ilustrado": cielo de crepúsculo pintado, luz cálida, bordes 
 - Sigue siendo genérico: asimétrico, sin torre central ni techos cónicos; las torres salen de las letras.
 - Hallazgos al probarlo: las siluetas bajaban a media letra y dejaban una banda detrás (ahora apoyan sobre el borde superior de cada letra), y la niebla más el aura lavaban las letras (se bajaron `castleMist` y `icons.aura`). Los colores de relleno se aclaraban por tratarse como lineales: se convierten desde sRGB.
 - Parámetros: `castleFill`, `castleTop`, `castleBottom`, `castleMist`.
+
+## Mejoras de vida y profundidad (2026-10-15)
+1. **El cielo reacciona a tu luz** (`backdrop.react`): la niebla se aparta alrededor del cursor, el cielo se calienta un poco ahí y las estrellas cercanas brillan más.
+2. **Puerta de la D como arco iluminado:** un rectángulo con medio círculo arriba, en dorado cálido (más claro arriba) con un leve latido, visible a través del hueco de la letra.
+3. **Capa lejana** (`finale.farLayer`, `farFill`, `farTop`, `farBottom`): una cresta de colinas suaves y nueve torres pequeñas (almenadas o con aguja), más claras y neblinosas, detrás del castillo. Aparece primero y despacio.
+
+## Hallazgos
+- **Orden de dibujo:** three.js ordena primero por *grupo* y luego por objeto. El relleno de las letras vive en un grupo con `renderOrder` -2, así que las colinas (objeto -8, pero en un grupo con 0) se pintaban encima de las letras y las lavaban. Solución: el castillo va en un grupo con -10 y el fondo en -100.
+- Las silueta y la puerta se ven correctamente a través del hueco de la D porque el castillo se dibuja detrás del relleno de las letras.
+
+## A observar con personas
+- ¿Notan que el cielo responde a su luz? ¿Se siente vivo o distrae?
+- ¿La puerta de la D se lee como puerta?

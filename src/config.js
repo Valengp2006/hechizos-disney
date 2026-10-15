@@ -10,6 +10,7 @@ export const CONFIG = {
     stars: 160,               // estrellas que titilan
     starBrightness: 0.9,      // su brillo 0..1
     bokeh: 0.07,              // luces desenfocadas flotantes (0 = ninguna)
+    react: 1.0,               // cuánto reacciona el cielo a tu luz: la niebla se aparta y las estrellas brillan (0 = nada)
   },
 
   // ---------- Pantalla de inicio ----------
@@ -405,6 +406,11 @@ export const CONFIG = {
     castleTop: [0.10, 0.07, 0.24],     // color de la silueta arriba (RGB 0..1)
     castleBottom: [0.34, 0.18, 0.30],  // color de la silueta abajo, tocada por la luz de las letras
     castleMist: 0.10,         // niebla cálida al pie del castillo (0 = ninguna)
+    // Capa lejana (profundidad): colinas y torres pequeñas, más claras y neblinosas, detrás del castillo.
+    farLayer: true,
+    farFill: 0.75,            // opacidad de la capa lejana
+    farTop: [0.20, 0.15, 0.36],        // color arriba
+    farBottom: [0.36, 0.21, 0.38],     // color abajo (más cálido, hundido en la niebla)
     castleWarmth: 0.5,        // cuánto se dora ese polvo (0..1)
   },
 };

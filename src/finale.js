@@ -24,6 +24,8 @@ const REF = 200; // em de referencia de las letras (ver letter.js)
 export function createFinale({ scene, letters, onReset = () => {} }) {
   const F = CONFIG.finale;
   const group = new THREE.Group();
+  // Orden de dibujo por grupo (antes que el relleno de las letras, que está en el grupo -2).
+  group.renderOrder = -10;
   scene.add(group);
 
   let phase = 'play';
@@ -185,9 +187,60 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
     const gy = first.y + first.h + first.h * 0.06;
     seg(first.x, gy, last.x + last.w, gy, 0.5, 0.75, 'wall');
 
-    // Puerta: la panza de la D se llena de luz cálida.
+    // Puerta: un arco iluminado dentro de la panza de la D (se ve a través del hueco de la letra).
     const D = boxes[0];
     dots.push({ x: D.x + D.w * 0.55, y: D.y + D.h * 0.5, ta: 0.82, kind: 'door' });
+    {
+      const dw = 0.3 * D.w, dcx = D.x + 0.56 * D.w;
+      const yb = D.y + 0.8 * D.h, yBody = D.y + 0.46 * D.h;
+      rect(dcx - dw / 2, dcx + dw / 2, yb, yBody, 0.82, 0.93, 'door');
+      for (let k = 0; k < 10; k++) {                 // medio círculo arriba, en abanico
+        const a0 = Math.PI + (k / 10) * Math.PI, a1 = Math.PI + ((k + 1) / 10) * Math.PI;
+        tris.push({
+          pts: [[dcx, yBody], [dcx + Math.cos(a0) * dw / 2, yBody + Math.sin(a0) * dw / 2],
+                [dcx + Math.cos(a1) * dw / 2, yBody + Math.sin(a1) * dw / 2]],
+          ta: 0.88, tb: 0.95, k: 'door', ph: 0,
+        });
+      }
+    }
+
+    // Capa lejana: colinas suaves y torres pequeñas, más claras, detrás del castillo.
+    const farPos = [], farCol = [];
+    if (F.farLayer) {
+      const W = window.innerWidth;
+      const gyF = first.y + first.h * 1.02;        // sobre la línea del suelo
+      const lin = (q) => Math.max(0, q) ** 2.2;
+      const push = (x, y, c) => { farPos.push(x, y, 0); farCol.push(lin(c[0]), lin(c[1]), lin(c[2])); };
+      const T = F.farTop, Bm = F.farBottom;
+      // Colinas: una cresta con dos senos (determinista), de lado a lado de la pantalla.
+      const hillH = (x) => first.h * (0.55 + 0.28 * Math.sin(x * 0.0061 + 1.2) + 0.17 * Math.sin(x * 0.0137 + 0.4));
+      const stepX = 24;
+      for (let x = -stepX; x < W + stepX; x += stepX) {
+        const y0 = gyF - hillH(x), y1 = gyF - hillH(x + stepX);
+        push(x, gyF + first.h * 0.5, Bm); push(x + stepX, gyF + first.h * 0.5, Bm); push(x + stepX, y1, T);
+        push(x, gyF + first.h * 0.5, Bm); push(x + stepX, y1, T); push(x, y0, T);
+      }
+      // Torres lejanas: pequeñas, a intervalos irregulares fijos, con una almena o un mástil.
+      for (let i = 0; i < 9; i++) {
+        const fx = ((i + 0.5 + 0.6 * Math.sin(i * 2.3)) / 9) * W;
+        const tw = first.h * (0.16 + 0.07 * ((i * 7) % 3));
+        const th = first.h * (0.9 + 0.5 * ((i * 5) % 4) / 3);
+        const yb = gyF - hillH(fx) + first.h * 0.15, yt = yb - th;
+        push(fx - tw / 2, yb, Bm); push(fx + tw / 2, yb, Bm); push(fx + tw / 2, yt, T);
+        push(fx - tw / 2, yb, Bm); push(fx + tw / 2, yt, T); push(fx - tw / 2, yt, T);
+        if (i % 2 === 0) {                          // almenas
+          const mw = tw / 5;
+          for (let m = 0; m < 3; m++) {
+            const x0 = fx - tw / 2 + m * 2 * mw, ym = yt - first.h * 0.07;
+            push(x0, yt, T); push(x0 + mw, yt, T); push(x0 + mw, ym, T);
+            push(x0, yt, T); push(x0 + mw, ym, T); push(x0, ym, T);
+          }
+        } else {                                    // aguja fina con un pequeño remate
+          const yp = yt - first.h * 0.5;
+          push(fx - tw * 0.12, yt, T); push(fx + tw * 0.12, yt, T); push(fx, yp, T);
+        }
+      }
+    }
 
     // Geometría: líneas (dinámicas) y puntos (ventanas, puerta, y puntos sobre las líneas).
     const linePos = new Float32Array(segs.length * 6);
@@ -236,11 +289,25 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
     }));
     mistObj.frustumCulled = false; mistObj.renderOrder = -7;
 
+    // Capa lejana: malla estática (solo cambia su opacidad al revelarse).
+    let farMesh = null, farMat = null;
+    if (farPos.length) {
+      const fg = new THREE.BufferGeometry();
+      fg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(farPos), 3));
+      fg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(farCol), 3));
+      farMat = new THREE.MeshBasicMaterial({
+        vertexColors: true, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide,
+      });
+      farMesh = new THREE.Mesh(fg, farMat);
+      farMesh.frustumCulled = false; farMesh.renderOrder = -8; // la más atrás de todo el castillo
+    }
+
     group.clear();
+    if (farMesh) group.add(farMesh);
     group.add(mistObj, fillMesh, lines, dotObj);
     castle = {
       segs, dots, linePos, lineCol, lineGeo, dotPos, dotCol, dotGeo, dotObj, boxes,
-      rects, tris, fillPos, fillCol, fillGeo, fillMat, mistCol, mistGeo,
+      rects, tris, fillPos, fillCol, fillGeo, fillMat, mistCol, mistGeo, farMat,
     };
   }
 
@@ -287,6 +354,14 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
     for (const r of c.rects) {
       const u = ease((p - r.ta) / Math.max(0.001, r.tb - r.ta));
       const yt = r.yb + (r.yt - r.yb) * u;
+      if (r.k === 'door') { // puerta: luz cálida (más clara arriba), con un leve latido
+        const br = 0.9 + 0.1 * Math.sin(s * 1.3);
+        put(r.x0, r.yb, 1.0 * br * u, 0.60 * br * u, 0.26 * br * u); put(r.x1, r.yb, 1.0 * br * u, 0.60 * br * u, 0.26 * br * u);
+        put(r.x1, yt, 1.0 * br * u, 0.84 * br * u, 0.50 * br * u);
+        put(r.x0, r.yb, 1.0 * br * u, 0.60 * br * u, 0.26 * br * u); put(r.x1, yt, 1.0 * br * u, 0.84 * br * u, 0.50 * br * u);
+        put(r.x0, yt, 1.0 * br * u, 0.84 * br * u, 0.50 * br * u);
+        continue;
+      }
       if (r.k === 'window') { // ventana encendida: dorado cálido, con un leve parpadeo
         const tw = 0.85 + 0.15 * Math.sin(s * 1.7 + r.x0);
         const cr = 1.0 * tw * u, cg = 0.80 * tw * u, cb = 0.42 * tw * u;
@@ -303,12 +378,20 @@ export function createFinale({ scene, letters, onReset = () => {} }) {
       const [a, b, d] = t.pts;
       const w = Math.sin(s * 3 + t.ph) * 3;       // el banderín ondea
       const f = (q, dy = 0) => [a[0] + (q[0] - a[0]) * u, a[1] + (q[1] - a[1]) * u + dy];
+      if (t.k === 'door') { // arco de la puerta: centro claro, borde más cálido
+        const br = (0.9 + 0.1 * Math.sin(s * 1.3)) * u;
+        put(a[0], a[1], 1.0 * br, 0.84 * br, 0.5 * br);
+        put(b[0], b[1], 1.0 * br, 0.62 * br, 0.28 * br); put(d[0], d[1], 1.0 * br, 0.62 * br, 0.28 * br);
+        continue;
+      }
       const A = f(a), B = f(b, w), D = f(d, w * 0.5);
       put(A[0], A[1], 0.78, 0.30, 0.46); put(B[0], B[1], 1.0, 0.72, 0.38); put(D[0], D[1], 0.62, 0.22, 0.40);
     }
     c.fillGeo.attributes.position.needsUpdate = true;
     c.fillGeo.attributes.color.needsUpdate = true;
     c.fillMat.opacity = F.castleFill * Math.min(1, g);
+    // La capa lejana aparece primero y despacio, como una bruma de fondo.
+    if (c.farMat) c.farMat.opacity = F.farFill * ease(p / 0.45) * Math.min(1, g);
     // Niebla al pie: sube con la revelación y respira.
     const mAmt = F.castleMist * smooth(0.5, 1, p) * Math.min(1, g) * (0.85 + 0.15 * Math.sin(s * 0.9));
     for (let i = 0; i < c.boxes.length; i++) {

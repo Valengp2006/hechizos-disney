@@ -21,6 +21,8 @@ const FRAG = `
   uniform float uTime;
   uniform vec2 uRes;
   uniform float uMist;
+  uniform vec2 uCursor;     // posición del cursor en 0..1 (y hacia arriba)
+  uniform float uCursorOn;  // 0..1
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float noise(vec2 p) {
     vec2 i = floor(p), f = fract(p);
@@ -52,6 +54,10 @@ const FRAG = `
     vec2 p1 = vec2(uv.x * asp, uv.y) * 2.1 + vec2(uTime * 0.010, uTime * 0.003);
     vec2 p2 = vec2(uv.x * asp, uv.y) * 3.6 - vec2(uTime * 0.016, -uTime * 0.005) + 7.3;
     float m = smoothstep(0.38, 0.88, fbm(p1)) * 0.7 + smoothstep(0.42, 0.9, fbm(p2)) * 0.45;
+    // La niebla se aparta alrededor de tu luz y el cielo se calienta un poco ahí.
+    float dc = length((uv - uCursor) * vec2(asp, 1.0));
+    m *= 1.0 - uCursorOn * 0.75 * (1.0 - smoothstep(0.0, 0.26, dc));
+    col += vec3(0.34, 0.20, 0.10) * exp(-dc * dc * 16.0) * 0.16 * uCursorOn;
     vec3 mistCol = mix(vec3(0.17, 0.11, 0.33), vec3(0.50, 0.28, 0.42), 1.0 - y);
     col += mistCol * m * uMist * (0.30 + 0.70 * (1.0 - y));
 
@@ -65,12 +71,17 @@ const FRAG = `
 export function createBackdrop(scene) {
   const B = CONFIG.backdrop;
   const group = new THREE.Group();
+  // three.js ordena primero por grupo y luego por objeto: el fondo va en el grupo más atrás.
+  group.renderOrder = -100;
   scene.add(group);
   if (!B.enabled) return { update() {}, resize() {} };
 
   // Cielo y niebla: un cuadro a pantalla completa con shader.
   const mat = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uMist: { value: B.mist } },
+    uniforms: {
+      uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uMist: { value: B.mist },
+      uCursor: { value: new THREE.Vector2(0.5, 0.5) }, uCursorOn: { value: 0 },
+    },
     vertexShader: VERT, fragmentShader: FRAG, depthTest: false, depthWrite: false,
   });
   const sky = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
@@ -118,12 +129,23 @@ export function createBackdrop(scene) {
   function resize(w, h) { W = w; H = h; mat.uniforms.uRes.value.set(w, h); }
   resize(W, H);
 
-  function update(t) {
+  let react = 0; // 0..1 suavizado: el cielo reacciona poco a poco
+  function update(t, cursor) {
     mat.uniforms.uTime.value = t;
+    const on = cursor && cursor.active ? B.react : 0;
+    react += (on - react) * 0.08;
+    mat.uniforms.uCursorOn.value = react;
+    if (cursor && cursor.active) mat.uniforms.uCursor.value.set(cursor.x / W, 1 - cursor.y / H);
     for (let i = 0; i < N; i++) {
       sPos[i * 3] = sx[i] * W; sPos[i * 3 + 1] = (1 - sy[i]) * H * 0.95;
       const tw = 0.45 + 0.55 * Math.sin(t * sfr[i] + sph[i]);
-      tmp.copy(stone[i] ? warm : cool).multiplyScalar(B.starBrightness * (0.25 + 0.75 * tw * tw));
+      // Las estrellas cerca de tu luz brillan más.
+      let near = 0;
+      if (cursor && cursor.active) {
+        const dx = sPos[i * 3] - cursor.x, dy = sPos[i * 3 + 1] - cursor.y;
+        near = Math.exp(-(dx * dx + dy * dy) / (190 * 190)) * react;
+      }
+      tmp.copy(stone[i] ? warm : cool).multiplyScalar(B.starBrightness * (0.25 + 0.75 * tw * tw) * (1 + 2.2 * near));
       sCol[i * 3] = tmp.r; sCol[i * 3 + 1] = tmp.g; sCol[i * 3 + 2] = tmp.b;
     }
     sGeo.attributes.position.needsUpdate = true;
